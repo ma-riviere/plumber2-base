@@ -1,0 +1,20 @@
+// front app stylesheet. A shiny-base-derived design layer on top of the vendored
+// Bootswatch flatly build: white navbar, blue accent, rounded surfaces, quick
+// hover transitions. Compiled to dist/css/app.<hash>.css by build_assets()
+// (front/R/assets.R) via the sass R package - no Node toolchain.
+//
+// Order matters: variables and the flatly re-tint come first, then base
+// typography, then components.
+
+@import "variables";
+@import "theme";
+@import "base";
+@import "navbar";
+@import "buttons";
+@import "forms";
+@import "cards";
+@import "model_picker";
+@import "tables";
+@import "modals";
+@import "account";
+@import "utils";

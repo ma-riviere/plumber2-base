@@ -1,0 +1,65 @@
+// Design tokens shared across the front-end SCSS. Ported from shiny-base
+// (www/sass/_variables.scss) so both apps share one visual identity: modern
+// neutral surfaces with a blue accent, layered on the vendored Bootswatch
+// flatly build. The flatly palette (navy primary, teal success, pink code) is
+// re-tinted to these values in _theme.scss.
+
+// Color palette - Modern neutral with accent
+$primary: #2563eb;
+$primary-dark: #1d4ed8;
+$primary-light: #3b82f6;
+
+$secondary: #64748b;
+$secondary-dark: #475569;
+$secondary-light: #94a3b8;
+
+$success: #10b981;
+$warning: #f59e0b;
+$danger: #ef4444;
+$info: #06b6d4;
+
+// Neutrals
+$gray-50: #f8fafc;
+$gray-100: #f1f5f9;
+$gray-200: #e2e8f0;
+$gray-300: #cbd5e1;
+$gray-400: #94a3b8;
+$gray-500: #64748b;
+$gray-600: #475569;
+$gray-700: #334155;
+$gray-800: #1e293b;
+$gray-900: #0f172a;
+
+$white: #ffffff;
+
+// Breakpoints (match Bootstrap 5)
+$breakpoint-sm: 576px;
+$breakpoint-md: 768px;
+$breakpoint-lg: 992px;
+
+// Spacing scale
+$spacing-xs: 0.25rem;
+$spacing-sm: 0.5rem;
+$spacing-md: 1rem;
+$spacing-lg: 1.5rem;
+$spacing-xl: 2rem;
+
+// Borders
+$border-radius-sm: 0.25rem;
+$border-radius: 0.375rem;
+$border-radius-lg: 0.5rem;
+$border-color: $gray-200;
+
+// Shadows
+$shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+$shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+$shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+
+// Transitions
+$transition-fast: 150ms ease;
+
+// Typography. Open Sans (shiny's choice) is a Google font; the strict CSP
+// (font-src/style-src 'self') forbids loading it, so we fall back to the same
+// system-sans chain shiny lists after it - crisp and near-identical in feel.
+$font-family-base: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+$font-family-mono: "SFMono-Regular", "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", monospace;

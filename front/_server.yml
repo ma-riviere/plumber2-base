@@ -1,0 +1,13 @@
+engine: plumber2
+routes:
+- routes/health.R
+- routes/auth.R
+- routes/pages.R
+- routes/partials_home.R
+- routes/partials_explore.R
+- routes/partials_model.R
+- routes/partials_admin.R
+- routes/account.R
+- routes/profile.R
+constructor: constructor.R
+options: []

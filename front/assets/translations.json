@@ -1,0 +1,712 @@
+{
+    "languages": [
+        "en",
+        "fr"
+    ],
+    "translation": [
+        {
+            "en": "Plumber2 Base",
+            "fr": "Plumber2 Base"
+        },
+        {
+            "en": "Home",
+            "fr": "Accueil"
+        },
+        {
+            "en": "Explore",
+            "fr": "Explorer"
+        },
+        {
+            "en": "Logout",
+            "fr": "Déconnexion"
+        },
+        {
+            "en": "Profile",
+            "fr": "Profil"
+        },
+        {
+            "en": "Nickname",
+            "fr": "Pseudonyme"
+        },
+        {
+            "en": "Email",
+            "fr": "E-mail"
+        },
+        {
+            "en": "Confirm Delete",
+            "fr": "Confirmer la suppression"
+        },
+        {
+            "en": "Are you sure you want to delete this dataset?",
+            "fr": "Êtes-vous sûr de vouloir supprimer ce jeu de données?"
+        },
+        {
+            "en": "Your uploaded datasets.",
+            "fr": "Vos jeux de données téléversés."
+        },
+        {
+            "en": "Datasets",
+            "fr": "Jeux de données"
+        },
+        {
+            "en": "Your Datasets",
+            "fr": "Vos jeux de données"
+        },
+        {
+            "en": "Upload Dataset",
+            "fr": "Téléverser un jeu de données"
+        },
+        {
+            "en": "No datasets yet. Upload your first dataset!",
+            "fr": "Aucun jeu de données. Téléversez votre premier jeu de données!"
+        },
+        {
+            "en": "Browse",
+            "fr": "Parcourir"
+        },
+        {
+            "en": "Drag and drop a CSV file here, or click to browse",
+            "fr": "Glissez-déposez un fichier CSV ici, ou cliquez pour parcourir"
+        },
+        {
+            "en": "Max 10MB, 100,000 rows",
+            "fr": "Max 10Mo, 100 000 lignes"
+        },
+        {
+            "en": "Upload",
+            "fr": "Téléverser"
+        },
+        {
+            "en": "Dataset uploaded successfully",
+            "fr": "Jeu de données téléversé avec succès"
+        },
+        {
+            "en": "Dataset deleted successfully",
+            "fr": "Jeu de données supprimé avec succès"
+        },
+        {
+            "en": "Profile updated successfully",
+            "fr": "Profil mis à jour avec succès"
+        },
+        {
+            "en": "Error updating profile:",
+            "fr": "Erreur lors de la mise à jour du profil:"
+        },
+        {
+            "en": "Error deleting dataset:",
+            "fr": "Erreur lors de la suppression du jeu de données:"
+        },
+        {
+            "en": "Error saving dataset:",
+            "fr": "Erreur lors de l'enregistrement du jeu de données:"
+        },
+        {
+            "en": "Error parsing dataset:",
+            "fr": "Erreur lors de l'analyse du jeu de données:"
+        },
+        {
+            "en": "Please select a valid CSV file",
+            "fr": "Veuillez sélectionner un fichier CSV valide"
+        },
+        {
+            "en": "Select a dataset to explore",
+            "fr": "Sélectionnez un jeu de données à explorer"
+        },
+        {
+            "en": "Explore your uploaded dataset",
+            "fr": "Explorez votre jeu de données téléversé"
+        },
+        {
+            "en": "Rows",
+            "fr": "Lignes"
+        },
+        {
+            "en": "Columns",
+            "fr": "Colonnes"
+        },
+        {
+            "en": "Data Preview",
+            "fr": "Aperçu des données"
+        },
+        {
+            "en": "Data preview pages",
+            "fr": "Pages de l'aperçu des données"
+        },
+        {
+            "en": "No dataset selected",
+            "fr": "Aucun jeu de données sélectionné"
+        },
+        {
+            "en": "Upload a new dataset or go to Home to select one",
+            "fr": "Téléversez un nouveau jeu de données ou allez à l'accueil pour en sélectionner un"
+        },
+        {
+            "en": "Go to Home",
+            "fr": "Aller à l'accueil"
+        },
+        {
+            "en": "Select Dataset",
+            "fr": "Sélectionner un jeu de données"
+        },
+        {
+            "en": "Save State",
+            "fr": "Sauvegarder l'état"
+        },
+        {
+            "en": "Change language",
+            "fr": "Changer de langue"
+        },
+        {
+            "en": "English",
+            "fr": "Anglais"
+        },
+        {
+            "en": "French",
+            "fr": "Français"
+        },
+        {
+            "en": "Preferred Language",
+            "fr": "Langue préférée"
+        },
+        {
+            "en": "Filters",
+            "fr": "Filtres"
+        },
+        {
+            "en": "Filter by row count",
+            "fr": "Filtrer par nombre de lignes"
+        },
+        {
+            "en": "Filter by date",
+            "fr": "Filtrer par date"
+        },
+        {
+            "en": "No datasets match the current filter",
+            "fr": "Aucun jeu de données ne correspond au filtre actuel"
+        },
+        {
+            "en": "Download",
+            "fr": "Télécharger"
+        },
+        {
+            "en": "CSV File(s)",
+            "fr": "Fichier(s) CSV"
+        },
+        {
+            "en": "Drag & drop, or click Browse (max 10MB per file)",
+            "fr": "Glissez-déposez, ou cliquez sur Parcourir (max 10Mo par fichier)"
+        },
+        {
+            "en": "No files selected",
+            "fr": "Aucun fichier sélectionné"
+        },
+        {
+            "en": "Please select at least one CSV file",
+            "fr": "Veuillez sélectionner au moins un fichier CSV"
+        },
+        {
+            "en": "Ready to upload %s file(s)",
+            "fr": "Prêt à téléverser %s fichier(s)"
+        },
+        {
+            "en": "%s: Too many rows (max %s, has %s)",
+            "fr": "%s: Trop de lignes (max %s, contient %s)"
+        },
+        {
+            "en": "%s: Error parsing CSV - %s",
+            "fr": "%s: Erreur lors de l'analyse du CSV - %s"
+        },
+        {
+            "en": "%s: Error saving - %s",
+            "fr": "%s: Erreur lors de l'enregistrement - %s"
+        },
+        {
+            "en": "%s datasets uploaded successfully",
+            "fr": "%s jeux de données téléversés avec succès"
+        },
+        {
+            "en": "%s of %s datasets uploaded",
+            "fr": "%s sur %s jeux de données téléversés"
+        },
+        {
+            "en": "Rename Dataset",
+            "fr": "Renommer le jeu de données"
+        },
+        {
+            "en": "New Name",
+            "fr": "Nouveau nom"
+        },
+        {
+            "en": "Enter new dataset name",
+            "fr": "Entrez un nouveau nom pour le jeu de données"
+        },
+        {
+            "en": "Rename",
+            "fr": "Renommer"
+        },
+        {
+            "en": "Dataset renamed successfully",
+            "fr": "Jeu de données renommé avec succès"
+        },
+        {
+            "en": "Error renaming dataset:",
+            "fr": "Erreur lors du renommage du jeu de données:"
+        },
+        {
+            "en": "Dataset name cannot be empty",
+            "fr": "Le nom du jeu de données ne peut pas être vide"
+        },
+        {
+            "en": "Welcome Back",
+            "fr": "Bon retour"
+        },
+        {
+            "en": "You have a recent session (%s).",
+            "fr": "Vous avez une session récente (%s)."
+        },
+        {
+            "en": "Restore",
+            "fr": "Restaurer"
+        },
+        {
+            "en": "Dismiss",
+            "fr": "Ignorer"
+        },
+        {
+            "en": "Recently Connected",
+            "fr": "Connexions récentes"
+        },
+        {
+            "en": "No recent connections",
+            "fr": "Aucune connexion récente"
+        },
+        {
+            "en": "View",
+            "fr": "Vue"
+        },
+        {
+            "en": "None",
+            "fr": "Aucun"
+        },
+        {
+            "en": "Roles",
+            "fr": "Rôles"
+        },
+        {
+            "en": "Model",
+            "fr": "Modèle"
+        },
+        {
+            "en": "Fit linear models to your data",
+            "fr": "Fit des modèles linéaires à vos données"
+        },
+        {
+            "en": "Model Equation",
+            "fr": "Équation du modèle"
+        },
+        {
+            "en": "Fit",
+            "fr": "Fit"
+        },
+        {
+            "en": "Enter an R formula (e.g., y ~ x1 + x2, y ~ poly(x, 2))",
+            "fr": "Entrez une formule R (ex: y ~ x1 + x2, y ~ poly(x, 2))"
+        },
+        {
+            "en": "Model Summary",
+            "fr": "Résumé du modèle"
+        },
+        {
+            "en": "Select a dataset from the sidebar to start modeling",
+            "fr": "Sélectionnez un jeu de données dans la barre latérale pour commencer"
+        },
+        {
+            "en": "Saved Models",
+            "fr": "Modèles enregistrés"
+        },
+        {
+            "en": "Delete model",
+            "fr": "Supprimer le modèle"
+        },
+        {
+            "en": "No saved models for this dataset",
+            "fr": "Aucun modèle enregistré pour ce jeu de données"
+        },
+        {
+            "en": "Model fitted successfully",
+            "fr": "Modèle fité avec succès"
+        },
+        {
+            "en": "Model fitting failed",
+            "fr": "Échec du fit du modèle"
+        },
+        {
+            "en": "Model saved",
+            "fr": "Modèle enregistré"
+        },
+        {
+            "en": "Model deleted",
+            "fr": "Modèle supprimé"
+        },
+        {
+            "en": "Error saving model",
+            "fr": "Erreur lors de l'enregistrement du modèle"
+        },
+        {
+            "en": "Error deleting model",
+            "fr": "Erreur lors de la suppression du modèle"
+        },
+        {
+            "en": "Error loading model",
+            "fr": "Erreur lors du chargement du modèle"
+        },
+        {
+            "en": "Model not found",
+            "fr": "Modèle non trouvé"
+        },
+        {
+            "en": "Model data corrupted",
+            "fr": "Données du modèle corrompues"
+        },
+        {
+            "en": "Available variables:",
+            "fr": "Variables disponibles :"
+        },
+        {
+            "en": "Login failed",
+            "fr": "Échec de la connexion"
+        },
+        {
+            "en": "The sign-in attempt could not be completed. Please try again.",
+            "fr": "La tentative de connexion n'a pas abouti. Veuillez réessayer."
+        },
+        {
+            "en": "Email verification required",
+            "fr": "Vérification de l'email requise"
+        },
+        {
+            "en": "Please verify your email address, then sign in again.",
+            "fr": "Veuillez vérifier votre adresse email, puis reconnectez-vous."
+        },
+        {
+            "en": "Try again",
+            "fr": "Réessayer"
+        },
+        {
+            "en": "Signed in as",
+            "fr": "Connecté en tant que"
+        },
+        {
+            "en": "Admin",
+            "fr": "Admin"
+        },
+        {
+            "en": "Account",
+            "fr": "Compte"
+        },
+        {
+            "en": "API Keys",
+            "fr": "Clés API"
+        },
+        {
+            "en": "Manage the API keys that grant direct access to the backend API.",
+            "fr": "Gérez les clés API qui donnent un accès direct à l'API backend."
+        },
+        {
+            "en": "Create API Key",
+            "fr": "Créer une clé API"
+        },
+        {
+            "en": "Key name",
+            "fr": "Nom de la clé"
+        },
+        {
+            "en": "Expires (optional)",
+            "fr": "Expiration (optionnelle)"
+        },
+        {
+            "en": "Create",
+            "fr": "Créer"
+        },
+        {
+            "en": "Revoke",
+            "fr": "Révoquer"
+        },
+        {
+            "en": "Revoked",
+            "fr": "Révoquée"
+        },
+        {
+            "en": "Active",
+            "fr": "Active"
+        },
+        {
+            "en": "Copy",
+            "fr": "Copier"
+        },
+        {
+            "en": "Copied to clipboard",
+            "fr": "Copié dans le presse-papiers"
+        },
+        {
+            "en": "This key is shown only once. Copy it now.",
+            "fr": "Cette clé n'est affichée qu'une seule fois. Copiez-la maintenant."
+        },
+        {
+            "en": "Scopes",
+            "fr": "Portées"
+        },
+        {
+            "en": "Created",
+            "fr": "Création"
+        },
+        {
+            "en": "Last used",
+            "fr": "Dernière utilisation"
+        },
+        {
+            "en": "Expires",
+            "fr": "Expiration"
+        },
+        {
+            "en": "Never",
+            "fr": "Jamais"
+        },
+        {
+            "en": "No API keys yet.",
+            "fr": "Aucune clé API pour le moment."
+        },
+        {
+            "en": "Are you sure you want to revoke this key?",
+            "fr": "Voulez-vous vraiment révoquer cette clé ?"
+        },
+        {
+            "en": "API key revoked",
+            "fr": "Clé API révoquée"
+        },
+        {
+            "en": "Users",
+            "fr": "Utilisateurs"
+        },
+        {
+            "en": "Requests",
+            "fr": "Requêtes"
+        },
+        {
+            "en": "All users",
+            "fr": "Tous les utilisateurs"
+        },
+        {
+            "en": "Recently active",
+            "fr": "Actifs récemment"
+        },
+        {
+            "en": "No users to show",
+            "fr": "Aucun utilisateur à afficher"
+        },
+        {
+            "en": "Edit role",
+            "fr": "Modifier le rôle"
+        },
+        {
+            "en": "Change role",
+            "fr": "Changer le rôle"
+        },
+        {
+            "en": "Role",
+            "fr": "Rôle"
+        },
+        {
+            "en": "default",
+            "fr": "défaut"
+        },
+        {
+            "en": "no scopes mapped",
+            "fr": "aucun scope associé"
+        },
+        {
+            "en": "Default role (no explicit Auth0 role)",
+            "fr": "Rôle par défaut (aucun rôle Auth0 explicite)"
+        },
+        {
+            "en": "Role changes apply on the next token refresh (up to 15 minutes).",
+            "fr": "Les changements de rôle s'appliquent au prochain rafraîchissement du jeton (jusqu'à 15 minutes)."
+        },
+        {
+            "en": "Role updated",
+            "fr": "Rôle mis à jour"
+        },
+        {
+            "en": "Access denied",
+            "fr": "Accès refusé"
+        },
+        {
+            "en": "You do not have permission to view this page.",
+            "fr": "Vous n'avez pas la permission de voir cette page."
+        },
+        {
+            "en": "Last 24 hours",
+            "fr": "Dernières 24 heures"
+        },
+        {
+            "en": "Last 7 days",
+            "fr": "7 derniers jours"
+        },
+        {
+            "en": "Last 30 days",
+            "fr": "30 derniers jours"
+        },
+        {
+            "en": "Service",
+            "fr": "Service"
+        },
+        {
+            "en": "Method",
+            "fr": "Méthode"
+        },
+        {
+            "en": "Path",
+            "fr": "Chemin"
+        },
+        {
+            "en": "Status",
+            "fr": "Statut"
+        },
+        {
+            "en": "Count",
+            "fr": "Nombre"
+        },
+        {
+            "en": "Avg ms",
+            "fr": "Moy. ms"
+        },
+        {
+            "en": "Max ms",
+            "fr": "Max ms"
+        },
+        {
+            "en": "Guest",
+            "fr": "Invité"
+        },
+        {
+            "en": "Save",
+            "fr": "Enregistrer"
+        },
+        {
+            "en": "Cancel",
+            "fr": "Annuler"
+        },
+        {
+            "en": "Delete",
+            "fr": "Supprimer"
+        },
+        {
+            "en": "Close",
+            "fr": "Fermer"
+        },
+        {
+            "en": "Min rows",
+            "fr": "Lignes min"
+        },
+        {
+            "en": "Max rows",
+            "fr": "Lignes max"
+        },
+        {
+            "en": "From",
+            "fr": "Du"
+        },
+        {
+            "en": "To",
+            "fr": "Au"
+        },
+        {
+            "en": "Name",
+            "fr": "Nom"
+        },
+        {
+            "en": "Description",
+            "fr": "Description"
+        },
+        {
+            "en": "Name (optional)",
+            "fr": "Nom (optionnel)"
+        },
+        {
+            "en": "Description (optional)",
+            "fr": "Description (optionnelle)"
+        },
+        {
+            "en": "Fitting model...",
+            "fr": "Ajustement du modèle..."
+        },
+        {
+            "en": "Loading...",
+            "fr": "Chargement..."
+        },
+        {
+            "en": "Server error, please try again",
+            "fr": "Erreur serveur, veuillez réessayer"
+        },
+        {
+            "en": "Previous",
+            "fr": "Précédent"
+        },
+        {
+            "en": "Next",
+            "fr": "Suivant"
+        },
+        {
+            "en": "Column",
+            "fr": "Colonne"
+        },
+        {
+            "en": "Type",
+            "fr": "Type"
+        },
+        {
+            "en": "Mean",
+            "fr": "Moyenne"
+        },
+        {
+            "en": "Missing",
+            "fr": "Manquants"
+        },
+        {
+            "en": "Unique",
+            "fr": "Uniques"
+        },
+        {
+            "en": "Last seen",
+            "fr": "Dernière visite"
+        },
+        {
+            "en": "Models",
+            "fr": "Modèles"
+        },
+        {
+            "en": "Edit",
+            "fr": "Modifier"
+        },
+        {
+            "en": "Are you sure?",
+            "fr": "Voulez-vous vraiment ?"
+        },
+        {
+            "en": "Nickname cannot be empty",
+            "fr": "Le pseudonyme ne peut pas être vide"
+        },
+        {
+            "en": "Language",
+            "fr": "Langue"
+        },
+        {
+            "en": "Drag & drop, or click to browse",
+            "fr": "Glissez-déposez, ou cliquez pour parcourir"
+        },
+        {
+            "en": "CSV only, max 10MB per file",
+            "fr": "CSV uniquement, 10 Mo max par fichier"
+        }
+    ]
+}

@@ -1,0 +1,41 @@
+// Account page: the one-time secret panel shown after creating an API key.
+// Replaces flatly's alert-success (bright teal with illegible pink <code>) with
+// a calm success-tinted panel and a readable inset secret.
+
+.key-created {
+    padding: $spacing-md;
+    background: rgba($success, 0.08);
+    border: 1px solid rgba($success, 0.3);
+    border-left: 4px solid $success;
+    border-radius: $border-radius;
+}
+
+.key-created-title {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    margin-bottom: $spacing-sm;
+    font-weight: 600;
+    color: #0b7a58;
+}
+
+.key-created-secret {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    flex-wrap: wrap;
+}
+
+.key-created-code {
+    flex: 1 1 auto;
+    min-width: 12rem;
+    padding: $spacing-sm $spacing-md;
+    background: $white;
+    border: 1px solid $border-color;
+    border-radius: $border-radius;
+    font-family: $font-family-mono;
+    font-size: 0.875rem;
+    color: $gray-800;
+    word-break: break-all;
+    user-select: all;
+}

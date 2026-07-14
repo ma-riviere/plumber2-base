@@ -1,0 +1,51 @@
+# RBAC for back: roles (from the Auth0 roles custom claim) map to API scopes.
+# Port of shiny-base's data/permissions.yaml adapted to the BE scope vocabulary.
+# Scope enforcement happens in-handler via
+# require_scope(); reads only require authentication.
+#
+# Scope vocabulary:
+#   write:datasets      create/rename/delete datasets (upload included)
+#   write:models        fit/save/delete models
+#   manage:keys         issue/list/revoke API keys (jwt-only endpoints; NEVER key-grantable)
+#   view:admin          admin endpoints (users/request stats/role listing)
+#   manage:admin:roles  change users' Auth0 roles (admin ONLY; NEVER key-grantable)
+
+scopes:
+  - write:datasets
+  - write:models
+  - manage:keys
+  - view:admin
+  - manage:admin:roles
+
+roles:
+  admin: "*"
+
+  # Developer: everything except Auth0 role management (mirrors shiny-base
+  # denying devs the Auth0 admin tab via "!view:admin:auth0")
+  dev:
+    - write:datasets
+    - write:models
+    - manage:keys
+    - view:admin
+
+  # Regular user: full self-service, no admin
+  user:
+    - write:datasets
+    - write:models
+    - manage:keys
+
+# Users with no (or only unknown) roles get this role's scopes, matching
+# shiny-base's default_role = "user" behavior (fresh signups can use the app).
+# Deliberate parity choice over deny-by-default: a valid token already proves
+# signature/aud/iss AND carries the email_verified custom claim set by the same
+# Auth0 Action that sets roles, so an Action failure rejects the token outright
+# rather than falling through to this default.
+default_role: user
+
+# Scopes an API key may carry. Key issuance (POST /v1/keys) intersects the
+# requested scopes with the caller's own scopes AND this list. manage:keys and
+# view:admin are deliberately absent: a key must never mint/revoke keys or read
+# admin data.
+key_safe_scopes:
+  - write:datasets
+  - write:models

@@ -1,0 +1,31 @@
+// Buttons. Flatly compiled its variant colors to literals, so retint the
+// accent variants by overriding Bootstrap 5.3's per-button CSS variables (more
+// surgical than redefining the whole .btn). Secondary/danger keep flatly's
+// neutral grays and red.
+
+.btn-primary {
+    --bs-btn-bg: #{$primary};
+    --bs-btn-border-color: #{$primary};
+    --bs-btn-hover-bg: #{$primary-dark};
+    --bs-btn-hover-border-color: #{$primary-dark};
+    --bs-btn-active-bg: #{$primary-dark};
+    --bs-btn-active-border-color: #{$primary-dark};
+    --bs-btn-disabled-bg: #{$primary};
+    --bs-btn-disabled-border-color: #{$primary};
+}
+
+.btn-outline-primary {
+    --bs-btn-color: #{$primary};
+    --bs-btn-border-color: #{$primary};
+    --bs-btn-hover-bg: #{$primary};
+    --bs-btn-hover-border-color: #{$primary};
+    --bs-btn-active-bg: #{$primary};
+    --bs-btn-active-border-color: #{$primary};
+    --bs-btn-disabled-color: #{$primary};
+    --bs-btn-disabled-border-color: #{$primary};
+}
+
+.btn-link {
+    --bs-btn-color: #{$primary};
+    --bs-btn-hover-color: #{$primary-dark};
+}

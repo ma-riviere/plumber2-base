@@ -1,0 +1,188 @@
+// Navbar. Ported from shiny-base _navbar.scss: white surface with a soft
+// shadow, pill-style nav links, a blue active state, a rounded user menu and a
+// compact language dropdown.
+
+.navbar {
+    background-color: $white;
+    box-shadow: $shadow-sm;
+    padding: $spacing-sm $spacing-md;
+    border-bottom: 1px solid $border-color;
+
+    .navbar-brand {
+        font-weight: 700;
+        font-size: 1.25rem;
+        color: $gray-800;
+
+        &:hover {
+            color: $primary;
+        }
+    }
+
+    .navbar-nav {
+        gap: $spacing-xs;
+        align-items: center;
+    }
+
+    .nav-link {
+        color: $gray-600;
+        font-weight: 500;
+        padding: $spacing-sm $spacing-md;
+        border-radius: $border-radius;
+        border: 1px solid transparent;
+        transition: color $transition-fast, background-color $transition-fast;
+
+        &:hover {
+            color: $primary;
+            background-color: $gray-50;
+        }
+
+        &.active {
+            color: $white;
+            background-color: $primary;
+            font-weight: 600;
+            box-shadow: $shadow-sm;
+        }
+    }
+
+    // Collapsed menu panel on mobile.
+    .navbar-collapse {
+        @media (max-width: $breakpoint-md) {
+            background-color: $white;
+            border-radius: $border-radius;
+            margin-top: $spacing-sm;
+            padding: $spacing-sm;
+            box-shadow: $shadow-sm;
+        }
+    }
+}
+
+// User menu rendered as a pill (matches shiny-base).
+.navbar .nav-item.dropdown .nav-link.dropdown-toggle {
+    background: transparent;
+    border: 1px solid $border-color;
+    border-radius: 20px;
+    padding: $spacing-sm $spacing-md;
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    color: $gray-700;
+
+    &:hover,
+    &[aria-expanded="true"] {
+        background-color: $gray-50;
+        border-color: $gray-300;
+        color: $gray-800;
+    }
+
+    .user-nickname {
+        font-weight: 500;
+        font-size: 0.9rem;
+    }
+
+    .dropdown-hamburger {
+        font-size: 1.1rem;
+        color: $gray-500;
+    }
+}
+
+.navbar .dropdown-menu {
+    border: none;
+    box-shadow: $shadow-md;
+    border-radius: $border-radius-lg;
+    padding: $spacing-sm;
+    margin-top: $spacing-sm;
+}
+
+.navbar .dropdown-item {
+    border-radius: $border-radius;
+    padding: $spacing-sm $spacing-md;
+    color: $gray-700;
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+
+    &:hover,
+    &:focus {
+        background-color: $gray-50;
+        color: $primary;
+    }
+
+    &.active {
+        background-color: $primary;
+        color: $white;
+    }
+
+    &.disabled {
+        color: $gray-400;
+    }
+
+    &.logout-item {
+        color: $danger;
+
+        &:hover,
+        &:focus {
+            background-color: rgba($danger, 0.1);
+            color: $danger;
+        }
+    }
+}
+
+// Language dropdown: compact flag/label toggle in the navbar. Ported from
+// shiny-base .language-dropdown.
+.language-dropdown {
+    .language-dropdown-toggle {
+        background: transparent;
+        border: 1px solid $border-color;
+        border-radius: $border-radius;
+        padding: $spacing-xs $spacing-sm;
+        display: flex;
+        align-items: center;
+        gap: $spacing-xs;
+        color: $gray-700;
+        transition: $transition-fast;
+        cursor: pointer;
+
+        &:hover,
+        &[aria-expanded="true"] {
+            background-color: $gray-50;
+            border-color: $gray-300;
+        }
+    }
+
+    .language-flag {
+        width: 20px;
+        height: 15px;
+        border-radius: 2px;
+        object-fit: cover;
+    }
+
+    .language-code {
+        font-weight: 600;
+        font-size: 0.8rem;
+        letter-spacing: 0.03em;
+    }
+
+    .dropdown-menu {
+        min-width: 150px;
+    }
+
+    .dropdown-item {
+        border-radius: $border-radius;
+        padding: $spacing-xs $spacing-sm;
+        color: $gray-700;
+        display: flex;
+        align-items: center;
+        gap: $spacing-sm;
+
+        &:hover,
+        &:focus {
+            background-color: $gray-50;
+            color: $primary;
+        }
+
+        &.active {
+            background-color: $primary;
+            color: $white;
+        }
+    }
+}

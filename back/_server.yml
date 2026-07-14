@@ -1,0 +1,11 @@
+engine: plumber2
+routes:
+- routes/health.R
+- routes/me.R
+- routes/datasets.R
+- routes/models.R
+- routes/jobs.R
+- routes/keys.R
+- routes/admin.R
+constructor: constructor.R
+options: []

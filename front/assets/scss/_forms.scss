@@ -1,0 +1,40 @@
+// Form controls: blue focus ring and checked state (flatly ships navy).
+
+.form-control:focus,
+.form-select:focus {
+    border-color: $primary-light;
+    box-shadow: 0 0 0 0.2rem rgba($primary, 0.2);
+}
+
+.form-check-input:checked {
+    background-color: $primary;
+    border-color: $primary;
+}
+
+.form-check-input:focus {
+    border-color: $primary-light;
+    box-shadow: 0 0 0 0.2rem rgba($primary, 0.2);
+}
+
+// Sidebar filters collapse toggle: a chrome-less button inheriting the h6
+// section-title look, with a chevron that points sideways when collapsed.
+.filters-toggle {
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    color: inherit;
+    text-transform: inherit;
+    letter-spacing: inherit;
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-xs;
+    cursor: pointer;
+    .filters-toggle-icon {
+        font-size: 0.75rem;
+        transition: transform $transition-fast;
+    }
+    &[aria-expanded="false"] .filters-toggle-icon {
+        transform: rotate(-90deg);
+    }
+}

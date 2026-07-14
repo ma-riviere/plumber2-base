@@ -1,0 +1,22 @@
+# Local dev database only. Both services run on the host during development
+# (back :8081, front :8080) and connect to this Postgres on 127.0.0.1:5433.
+services:
+  postgres:
+    image: postgres:18
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: apps
+    volumes:
+      # Postgres 18 images store data under a version subdir; mount the parent, not /data.
+      - pgdata-dev:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d apps"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata-dev:

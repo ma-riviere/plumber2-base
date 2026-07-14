@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="{{lang}}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{title}}</title>
+    <meta name="htmx-config" content='{"allowEval": false, "includeIndicatorStyles": false, "historyRestoreAsHxRequest": false, "refreshOnHistoryMiss": true, "allowNestedOobSwaps": false, "responseHandling": [{"code": "204", "swap": false}, {"code": "[23]..", "swap": true}, {"code": "4..", "swap": true, "error": false}, {"code": "...", "swap": false, "error": true}]}'>
+    <meta name="csrf-token" content="{{csrf_token}}">
+    <link rel="stylesheet" href="{{asset_bootstrap_css}}">
+    <link rel="stylesheet" href="{{asset_icons_css}}">
+    <link rel="stylesheet" href="{{asset_app_css}}">
+</head>
+<body data-server-error="{{msg_server_error}}">
+    <nav class="navbar navbar-expand-md">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">{{brand}}</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#navbar-main" aria-controls="navbar-main"
+                    aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbar-main">
+                <ul class="navbar-nav me-auto">
+                    {{{nav_links}}}
+                </ul>
+                <ul class="navbar-nav ms-auto">
+                    {{{user_menu}}}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container-fluid py-4">
+        {{{content}}}
+    </main>
+
+    <div id="modal-slot"></div>
+    <div id="toasts" class="toast-container position-fixed bottom-0 end-0 p-3"></div>
+
+    <script src="{{asset_htmx_js}}"></script>
+    <script src="{{asset_bootstrap_js}}"></script>
+    <script src="{{asset_app_js}}"></script>
+</body>
+</html>

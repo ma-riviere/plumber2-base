@@ -1,0 +1,35 @@
+Package: back
+Title: plumber-base Backend Service
+Version: 0.0.1
+Description: JSON REST API service of the plumber-base app. Not a distributable
+    package; this DESCRIPTION exists to pin the service's dependencies for renv.
+Encoding: UTF-8
+Imports:
+    plumber2,
+    fireproof,
+    reqres,
+    routr,
+    fiery,
+    pool,
+    DBI,
+    RPostgres,
+    auth0r,
+    httr2,
+    sodium,
+    openssl,
+    yyjsonr,
+    jsonlite,
+    yaml,
+    R6,
+    mirai,
+    promises,
+    later,
+    readr,
+    storr,
+    butcher,
+    cli
+Suggests:
+    testthat,
+    callr,
+    webfakes,
+    withr

@@ -1,0 +1,31 @@
+Package: front
+Title: plumber-base Frontend Service
+Version: 0.0.1
+Description: Server-rendered htmx + Bootstrap web app of the plumber-base app.
+    Not a distributable package; this DESCRIPTION exists to pin the service's
+    dependencies for renv.
+Encoding: UTF-8
+Imports:
+    plumber2,
+    reqres,
+    routr,
+    fiery,
+    DBI,
+    RPostgres,
+    httr2,
+    curl,
+    auth0r,
+    sodium,
+    openssl,
+    htmltools,
+    whisker,
+    sass,
+    yyjsonr,
+    storr,
+    cli
+Suggests:
+    testthat,
+    webfakes,
+    httptest2,
+    withr,
+    xml2

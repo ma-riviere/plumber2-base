@@ -1,0 +1,36 @@
+// Re-tint the vendored Bootswatch flatly build from its navy/teal palette to the
+// shiny-base blue accent. Bootstrap 5.3 exposes most theme colors as CSS custom
+// properties, so overriding them here recolors the utilities and components that
+// reference them (.text-primary, .bg-primary, .border-primary, focus rings,
+// alerts, badges). Components whose colors flatly compiled to literals
+// (.btn-primary, .form-check-input, ...) are overridden in their own partials.
+
+:root,
+[data-bs-theme="light"] {
+    --bs-primary: #{$primary};
+    --bs-primary-rgb: 37, 99, 235;
+    --bs-primary-text-emphasis: #{$primary-dark};
+    --bs-primary-bg-subtle: #{rgba($primary, 0.1)};
+    --bs-primary-border-subtle: #{rgba($primary, 0.3)};
+
+    --bs-link-color: #{$primary};
+    --bs-link-color-rgb: 37, 99, 235;
+    --bs-link-hover-color: #{$primary-dark};
+    --bs-link-hover-color-rgb: 29, 78, 216;
+
+    --bs-success: #{$success};
+    --bs-success-rgb: 16, 185, 129;
+    --bs-success-text-emphasis: #0b7a58;
+    --bs-success-bg-subtle: #{rgba($success, 0.12)};
+    --bs-success-border-subtle: #{rgba($success, 0.3)};
+
+    --bs-danger: #{$danger};
+    --bs-danger-rgb: 239, 68, 68;
+
+    --bs-border-color: #{$border-color};
+    --bs-border-radius: #{$border-radius};
+    --bs-border-radius-sm: #{$border-radius-sm};
+    --bs-border-radius-lg: #{$border-radius-lg};
+
+    --bs-focus-ring-color: #{rgba($primary, 0.25)};
+}

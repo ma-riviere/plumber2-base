@@ -1,0 +1,87 @@
+// Modals + the upload dropzone.
+
+.modal-content {
+    border: none;
+    border-radius: 0.75rem;
+    box-shadow: $shadow-md;
+}
+
+.modal-header,
+.modal-footer {
+    border-color: $border-color;
+}
+
+// Upload dropzone: a dashed drop target wrapping a visually-hidden file input.
+// Clicking anywhere opens the picker (native <label for>); drag&drop is wired
+// in app.js, which toggles .is-dragover and fills .file-dropzone-file.
+.file-dropzone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-xs;
+    width: 100%;
+    min-height: 150px;
+    padding: $spacing-lg;
+    text-align: center;
+    border: 2px dashed $border-color;
+    border-radius: $border-radius-lg;
+    background: $gray-50;
+    color: $gray-600;
+    cursor: pointer;
+    transition: border-color $transition-fast, background $transition-fast;
+
+    &:hover,
+    &.is-dragover {
+        border-color: $primary;
+        background: rgba($primary, 0.04);
+    }
+
+    &.is-dragover {
+        border-style: solid;
+    }
+}
+
+.file-dropzone-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}
+
+.file-dropzone-icon {
+    font-size: 2rem;
+    color: $primary;
+    opacity: 0.8;
+}
+
+.file-dropzone-text {
+    font-weight: 600;
+    color: $gray-700;
+}
+
+.file-dropzone-hint {
+    font-size: 0.75rem;
+    color: $gray-500;
+}
+
+// Chosen filename, shown once a file is picked/dropped.
+.file-dropzone-file {
+    display: none;
+    margin-top: $spacing-xs;
+    padding: $spacing-xs $spacing-sm;
+    background: rgba($primary, 0.1);
+    border-radius: $border-radius;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: $primary;
+    word-break: break-all;
+
+    &:not(:empty) {
+        display: block;
+    }
+}

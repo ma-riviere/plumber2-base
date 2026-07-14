@@ -1,0 +1,84 @@
+# LOCAL RUN ONLY - never pushed to the server. `docker compose up` in this
+# directory merges it over compose.yml, producing the Phase 9 gate stack:
+# images built from the working tree, a throwaway Postgres 18 mirroring the
+# platform's (role/schema provisioning from db/dev-init.sql), both services in
+# guest mode (dev + BYPASS_AUTH), and loopback port publishing since no Traefik
+# runs locally. Wipe with `docker compose down -v`.
+#
+# The local project name must differ from the dev stack's (compose.dev.yml has
+# no name: and inherits "plumber-base" from the repo folder): identical project
+# + service names would make the two stacks recreate each other's postgres.
+name: plumber-base-local
+
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: apps
+    volumes:
+      # Postgres 18 images store data under a version subdir; mount the parent.
+      - pgdata-deploy:/var/lib/postgresql
+      - ../db/dev-init.sql:/docker-entrypoint-initdb.d/10-app-roles.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d apps"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - postgres
+
+  back:
+    build:
+      context: ..
+      dockerfile: back/Dockerfile
+      secrets:
+        - github_pat
+    environment:
+      ENVIRONMENT: dev
+      BYPASS_AUTH: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8081:8081"
+
+  front:
+    build:
+      context: ..
+      dockerfile: front/Dockerfile
+      secrets:
+        - github_pat
+    environment:
+      ENVIRONMENT: dev
+      BYPASS_AUTH: "true"
+      APP_URL: http://localhost:8080
+      BACKEND_PUBLIC_URL: http://localhost:8081
+      # Guest-mode sessions still need a stable key for CSRF and cookie signing.
+      # It is local-only, non-secret, and the port is loopback-bound.
+      SESSION_KEY: plumber2-base-local-development-key
+    depends_on:
+      postgres:
+        condition: service_healthy
+      back:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8080:8080"
+
+# The prod networks are external (created by the platform); locally compose
+# manages them under project-scoped names.
+networks:
+  edge:
+    external: false
+    name: plumber-base-edge
+  postgres:
+    external: false
+    name: plumber-base-postgres
+
+volumes:
+  pgdata-deploy:
+
+secrets:
+  github_pat:
+    environment: GITHUB_PAT

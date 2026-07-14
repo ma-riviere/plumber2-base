@@ -1,0 +1,169 @@
+// Cards. Adapted from shiny-base _cards.scss to plumber's Bootstrap card
+// structure (.card > .card-header/.card-body carry the padding, so the outer
+// .card only owns border/shadow/hover).
+
+.card {
+    border: 1px solid $border-color;
+    border-radius: $border-radius-lg;
+    box-shadow: $shadow-sm;
+    transition: box-shadow $transition-fast, transform $transition-fast;
+
+    &:hover {
+        box-shadow: $shadow-md;
+        transform: translateY(-2px);
+    }
+
+    .card-header {
+        background-color: $white;
+        border-bottom: 1px solid $border-color;
+        font-weight: 600;
+    }
+
+    .card-title {
+        font-weight: 600;
+        color: $gray-800;
+    }
+}
+
+// Home stat card: compact, with the leading icon in a tinted rounded badge.
+.stat-card {
+    max-width: 22rem;
+
+    &:hover {
+        // A count card is not actionable; skip the lift.
+        transform: none;
+    }
+
+    .card-body > .bi {
+        flex-shrink: 0;
+        width: 3rem;
+        height: 3rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba($primary, 0.1);
+        color: $primary;
+        border-radius: $border-radius;
+    }
+
+    .display-6 {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: $gray-900;
+        line-height: 1.1;
+    }
+}
+
+// Datasets list card: accented header (gradient + blue left rule).
+.datasets-card {
+    overflow: hidden;
+
+    .card-header {
+        background: linear-gradient(to right, rgba($primary, 0.05), $white);
+        border-bottom: 1px solid $border-color;
+        border-left: 4px solid $primary;
+    }
+}
+
+// One dataset row shared by Home and Explore (shiny-base grid parity): a soft
+// card holding the name | age | size columns and the trailing actions, lifting
+// to white with a blue rule on hover. The inline-rename form reuses the class
+// with d-flex utilities (which win over the grid display).
+.dataset-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: $spacing-md;
+    align-items: center;
+    padding: $spacing-md;
+    margin-bottom: $spacing-sm;
+    background: $gray-50;
+    border: 1px solid $border-color;
+    border-radius: $border-radius;
+    transition: background $transition-fast, border-color $transition-fast, box-shadow $transition-fast;
+    &:last-child {
+        margin-bottom: 0;
+    }
+    &:hover,
+    &:focus-within {
+        background: $white;
+        border-color: $primary;
+        box-shadow: $shadow-sm;
+    }
+    .dataset-row-link {
+        display: grid;
+        grid-template-columns: 2fr 1fr 1.5fr;
+        gap: $spacing-md;
+        align-items: center;
+        text-decoration: none;
+        color: inherit;
+        &.clickable {
+            cursor: pointer;
+        }
+        &.clickable:hover .dataset-name {
+            color: $primary;
+        }
+        @media (max-width: $breakpoint-sm) {
+            grid-template-columns: 1fr;
+            gap: $spacing-sm;
+        }
+    }
+    .dataset-col {
+        display: flex;
+        align-items: center;
+        gap: $spacing-xs;
+    }
+    .dataset-col-name .dataset-name {
+        font-weight: 600;
+        color: $gray-800;
+    }
+    .dataset-col-age,
+    .dataset-col-size {
+        font-size: 0.875rem;
+        color: $gray-500;
+        .bi {
+            opacity: 0.7;
+        }
+    }
+    .dataset-col-actions {
+        justify-content: flex-end;
+        .btn-action-dataset {
+            width: 2rem;
+            height: 2rem;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+    }
+    @media (max-width: $breakpoint-sm) {
+        grid-template-columns: 1fr;
+        gap: $spacing-sm;
+    }
+}
+
+// Model page metric tiles.
+.metric-card {
+    background: $gray-50;
+    border-color: $border-color !important;
+
+    .h4 {
+        color: $gray-900;
+        font-weight: 700;
+    }
+}
+
+// Admin user cards: tinted circular avatar placeholder.
+.admin-user-card {
+    .admin-user-avatar {
+        flex-shrink: 0;
+        width: 3rem;
+        height: 3rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba($primary, 0.1);
+        color: $primary;
+        border-radius: 50%;
+        font-size: 1.5rem;
+    }
+}

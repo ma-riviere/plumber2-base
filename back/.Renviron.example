@@ -1,0 +1,22 @@
+# back dev environment. Copy to .Renviron (gitignored) and fill secrets.
+
+# Core
+PORT=8081
+HOST=0.0.0.0
+ENVIRONMENT=dev
+BYPASS_AUTH=true
+LOG_LEVEL=debug
+
+# Postgres (dev compose: host 127.0.0.1, port 5433, app role plumber_base)
+PGHOST=127.0.0.1
+PGPORT=5433
+PGDATABASE=apps
+PGUSER=plumber_base
+PGPASSWORD=plumber_base
+
+# Auth0 (skipped in dev while BYPASS_AUTH=true; fill from the tenant otherwise)
+AUTH0_DOMAIN=
+AUTH0_AUDIENCE=
+
+# Rate limiting (requests per minute, per principal; per-endpoint overrides in config)
+RATE_LIMIT_PER_MIN=120

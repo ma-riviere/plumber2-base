@@ -1,0 +1,123 @@
+# Production stack for the deploy-server platform. CI pushes this file verbatim
+# to /srv/apps/plumber-base/compose.yml (`deploy-app push-compose`), where the
+# platform-provisioned db.env sits beside it and the edge/postgres networks are
+# external. Contract (deploy-server examples/README.md): pinned image tags, no
+# ports:, restart policy, no-new-privileges, container healthcheck (defined in
+# the service Dockerfiles), Traefik-only ingress.
+#
+# Local run: compose.override.yml (merged automatically by `docker compose up`
+# in this directory) swaps in local image builds, a throwaway Postgres, guest
+# mode, and loopback port publishing. See deploy/README.md.
+#
+# CI substitutes IMAGE_TAG with the commit SHA before pushing this file.
+name: plumber2-base
+
+services:
+  back:
+    image: ghcr.io/ma-riviere/plumber2-base-back:${IMAGE_TAG:-local}
+    restart: unless-stopped
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    # app.env (delivered by deploy-server's Ansible from the gitignored
+    # repo-root master copy; apps[].app_env_file in its config.yml):
+    # AUTH0_DOMAIN, AUTH0_AUDIENCE, AUTH0_CLAIM_NAMESPACE. required: false so
+    # the local overlay (guest mode, no app.env) still merges; in prod the
+    # entrypoint's startup assertions abort loudly on missing Auth0 config.
+    env_file:
+      - db.env
+      - path: app.env
+        required: false
+    environment:
+      ENVIRONMENT: prod
+      HOST: "0.0.0.0"
+      PORT: "8081"
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.pb-back.rule: "Host(`plumber2-base-api.ma-riviere.com`)"
+      traefik.http.routers.pb-back.entrypoints: websecure
+      traefik.http.routers.pb-back.tls: "true"
+      traefik.http.routers.pb-back.tls.certresolver: letsencrypt
+      # Cloudflare Authenticated Origin Pulls: the TLS handshake requires
+      # Cloudflare's origin-pull client cert (option shipped by the platform's
+      # traefik role), so direct-to-origin requests fail.
+      traefik.http.routers.pb-back.tls.options: cloudflare-origin-pull@file
+      traefik.http.routers.pb-back.middlewares: pb-back-buffering
+      traefik.http.services.pb-back.loadbalancer.server.port: "8081"
+      # Oversized uploads are rejected at the proxy BEFORE the R multipart
+      # parser buffers them; the app's Content-Length precheck and row/col caps
+      # remain as the second and third layers. Defined
+      # per-service (not shared): a middleware referenced across containers
+      # vanishes with its defining container, 500ing the other router while
+      # this one restarts.
+      traefik.http.middlewares.pb-back-buffering.buffering.maxRequestBodyBytes: "12582912"
+    networks:
+      - edge
+      - postgres
+
+  front:
+    image: ghcr.io/ma-riviere/plumber2-base-front:${IMAGE_TAG:-local}
+    restart: unless-stopped
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    # The back's entrypoint gates on the shared DDL + migrations (users lives
+    # in the cross-app "shared" schema); the front writes to users at session
+    # start and must not come up before that gate has passed.
+    depends_on:
+      back:
+        condition: service_healthy
+    # db.env: the FE keeps its server-side sessions in the same app schema.
+    # app.env: AUTH0_DOMAIN, AUTH0_CLIENT_ID, AUTH0_CLIENT_SECRET,
+    # AUTH0_AUDIENCE, AUTH0_CLAIM_NAMESPACE, AUTH0_MGMT_CLIENT_ID,
+    # AUTH0_MGMT_CLIENT_SECRET, SESSION_KEY (required: false for the local
+    # overlay; prod startup assertions enforce them).
+    env_file:
+      - db.env
+      - path: app.env
+        required: false
+    environment:
+      ENVIRONMENT: prod
+      HOST: "0.0.0.0"
+      PORT: "8080"
+      # FE -> BE traffic stays on the docker network, no public round-trip.
+      BACKEND_URL: http://back:8081
+      APP_URL: https://plumber2-base.ma-riviere.com
+      BACKEND_PUBLIC_URL: https://plumber2-base-api.ma-riviere.com
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.pb-front.rule: "Host(`plumber2-base.ma-riviere.com`)"
+      traefik.http.routers.pb-front.entrypoints: websecure
+      traefik.http.routers.pb-front.tls: "true"
+      traefik.http.routers.pb-front.tls.certresolver: letsencrypt
+      traefik.http.routers.pb-front.tls.options: cloudflare-origin-pull@file
+      traefik.http.routers.pb-front.middlewares: pb-front-buffering
+      # Same 12MB buffering as the back, defined on THIS container so the
+      # front router keeps its middleware while the back restarts.
+      traefik.http.middlewares.pb-front-buffering.buffering.maxRequestBodyBytes: "12582912"
+      traefik.http.services.pb-front.loadbalancer.server.port: "8080"
+      # Immutable cache headers for the fingerprinted statics, scoped to
+      # /static via a dedicated router (longer rule = higher priority, same
+      # service). @statics serves at the C++ level and cannot set headers in R.
+      # TLS options bind per SNI hostname: this router MUST carry the same
+      # cloudflare-origin-pull option as pb-front or Traefik falls back to the
+      # default option for the whole hostname.
+      traefik.http.routers.pb-front-static.rule: "Host(`plumber2-base.ma-riviere.com`) && PathPrefix(`/static`)"
+      traefik.http.routers.pb-front-static.entrypoints: websecure
+      traefik.http.routers.pb-front-static.tls: "true"
+      traefik.http.routers.pb-front-static.tls.certresolver: letsencrypt
+      traefik.http.routers.pb-front-static.tls.options: cloudflare-origin-pull@file
+      traefik.http.routers.pb-front-static.service: pb-front
+      traefik.http.routers.pb-front-static.middlewares: pb-static-cache
+      traefik.http.middlewares.pb-static-cache.headers.customresponseheaders.Cache-Control: "public, max-age=31536000, immutable"
+    networks:
+      - edge
+      - postgres
+
+networks:
+  edge:
+    external: true
+    name: edge
+  postgres:
+    external: true
+    name: postgres

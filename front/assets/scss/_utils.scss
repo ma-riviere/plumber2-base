@@ -1,0 +1,9 @@
+// Small shared bits: toast stack spacing.
+
+#toasts .toast {
+    box-shadow: $shadow-md;
+
+    &:not(:last-child) {
+        margin-bottom: $spacing-sm;
+    }
+}

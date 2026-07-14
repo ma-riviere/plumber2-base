@@ -1,0 +1,19 @@
+// Tables. Light polish on top of Bootstrap's .table: subtle header shade and a
+// scrollable preview container (shiny-base _tables.scss parity).
+
+.table {
+    font-size: 0.875rem;
+
+    > thead th {
+        font-weight: 600;
+        color: $gray-700;
+        background-color: $gray-50;
+        border-bottom-color: $border-color;
+    }
+}
+
+// Data preview scroll area (Explore).
+#preview .table-responsive {
+    max-height: 600px;
+    overflow: auto;
+}
