@@ -9,7 +9,10 @@
 #* @post /v1/models
 #* @serializer json
 function(body, datastore, response) {
-    require_scope(datastore, "write:models")
+    scope <- require_scope(datastore, response, "write:models")
+    if (!isTRUE(scope)) {
+        return(scope)
+    }
     principal <- request_principal(datastore, response)
     config <- app_config()
 
@@ -99,7 +102,10 @@ function(id, datastore, response) {
 #* @delete /v1/models/<id:integer>
 #* @serializer json
 function(id, datastore, response) {
-    require_scope(datastore, "write:models")
+    scope <- require_scope(datastore, response, "write:models")
+    if (!isTRUE(scope)) {
+        return(scope)
+    }
     principal <- request_principal(datastore, response)
     if (!db_delete_model(app_pool(), principal$user_id, id)) {
         reqres::abort_not_found("no such model")

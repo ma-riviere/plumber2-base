@@ -240,6 +240,7 @@ auth0_fake_app <- function(key_pem_path, claim_ns) {
                 iss = iss,
                 aud = "fe-client",
                 sub = "auth0|fe-user",
+                sid = "sid-1",
                 nonce = nonce,
                 email = "user@example.test",
                 email_verified = email_verified,

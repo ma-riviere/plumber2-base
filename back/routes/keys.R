@@ -5,7 +5,10 @@
 #* @get /v1/keys
 #* @serializer json
 function(datastore, response) {
-    require_scope(datastore, "manage:keys")
+    scope <- require_scope(datastore, response, "manage:keys")
+    if (!isTRUE(scope)) {
+        return(scope)
+    }
     principal <- request_principal(datastore, response)
     rows <- DBI::dbGetQuery(
         app_pool(),
@@ -41,7 +44,10 @@ function(datastore, response) {
 #* @post /v1/keys
 #* @serializer json
 function(body, datastore, response) {
-    require_scope(datastore, "manage:keys")
+    scope <- require_scope(datastore, response, "manage:keys")
+    if (!isTRUE(scope)) {
+        return(scope)
+    }
     principal <- request_principal(datastore, response)
     permissions <- app_permissions()
 
@@ -82,7 +88,10 @@ function(body, datastore, response) {
 #* @delete /v1/keys/<id:integer>
 #* @serializer json
 function(id, datastore, response) {
-    require_scope(datastore, "manage:keys")
+    scope <- require_scope(datastore, response, "manage:keys")
+    if (!isTRUE(scope)) {
+        return(scope)
+    }
     principal <- request_principal(datastore, response)
     if (!revoke_api_key(app_pool(), principal$user_id, id)) {
         reqres::abort_not_found("no such active key")

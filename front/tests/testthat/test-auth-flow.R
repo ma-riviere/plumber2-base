@@ -58,7 +58,10 @@ test_that("the full OIDC login round-trips: gate, authorize, callback, session",
         headers = list(Cookie = cookie, Origin = "http://t", X_CSRF_Token = token)
     )
     expect_equal(r5$status, 302L)
-    expect_match(r5$headers[["location"]], paste0("^", tenant$base_url, "/v2/logout\\?client_id=fe-client"))
+    expect_match(r5$headers[["location"]], paste0("^", tenant$base_url, "/oidc/logout\\?client_id=fe-client"))
+    expect_match(r5$headers[["location"]], "post_logout_redirect_uri=", fixed = TRUE)
+    # The ID token's sid claim rides as the logout hint (no ID token is stored).
+    expect_match(r5$headers[["location"]], "logout_hint=sid-1", fixed = TRUE)
     expect_match(r5$headers[["clear-site-data"]], "cookies")
     expect_equal(tenant$stats()$n_revoke, 1L)
     expect_equal(do_request(pa, "http://t/home", headers = list(Cookie = cookie))$status, 302L)

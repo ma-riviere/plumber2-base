@@ -187,11 +187,22 @@ current_principal <- function(datastore) {
 }
 
 # In-handler scope enforcement (fireproof auth_scope is broken, spike finding 1).
-require_scope <- function(datastore, needed) {
+# Denials follow RFC 6750: 403 + WWW-Authenticate error="insufficient_scope" +
+# problem+json body. The challenge header cannot survive an abort_* unwind (the
+# problem renderer clears headers), so the problem is written directly and, as
+# with respond_problem, the CALLER MUST RETURN the non-TRUE result, which is
+# plumber2::Break, instead of continuing the handler.
+require_scope <- function(datastore, response, needed) {
     granted <- current_principal(datastore)$scopes
     missing <- setdiff(needed, granted)
     if (length(missing)) {
-        reqres::abort_forbidden(paste0("missing scope(s): ", paste(missing, collapse = ", ")))
+        return(auth0r::write_bearer_problem(
+            response,
+            403L,
+            error = "insufficient_scope",
+            scope = needed,
+            detail = paste0("missing scope(s): ", paste(missing, collapse = ", "))
+        ))
     }
     invisible(TRUE)
 }

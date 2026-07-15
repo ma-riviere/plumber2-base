@@ -1,6 +1,6 @@
 #* Sign in. Guest mode (BYPASS_AUTH, dev only) creates the guest session
-#* directly; otherwise stores the one-shot OIDC state (state/nonce/PKCE
-#* verifier/target) in the server-side session and redirects to Auth0's
+#* directly; otherwise stores the one-shot OIDC transaction (state/nonce/PKCE
+#* verifier + target) in the server-side session and redirects to Auth0's
 #* /authorize. `next` must be a local path (open-redirect guard).
 #* @query next:string Where to land after login (local absolute path)
 #* @get /login
@@ -17,21 +17,23 @@ function(request, response, server, datastore, query) {
         create_auth_session(datastore, user = guest, roles = character(), tokens = NULL, config = config)
         return(redirect(response, next_path))
     }
-    oidc <- list(
-        state = random_url_token(),
-        nonce = random_url_token(),
-        verifier = random_url_token(),
-        next_path = next_path,
-        created_at = as.numeric(Sys.time())
+    # offline_access requests the rotating refresh token; the API must have
+    # "Allow Offline Access" enabled in Auth0.
+    login_start <- auth0r::oidc_login_start(
+        app_auth0_client(config),
+        redirect_uri = oidc_redirect_uri(config),
+        scope = "openid profile email offline_access",
+        audience = config$auth0$audience
     )
-    datastore$session$oidc <- oidc
-    redirect(response, build_authorize_url(config, oidc$state, oidc$nonce, pkce_challenge(oidc$verifier)))
+    datastore$session$oidc <- list(txn = login_start$txn, next_path = next_path)
+    redirect(response, login_start$url)
 }
 
-#* OIDC callback: verify the state echo, exchange the code (client secret +
-#* PKCE verifier), validate the ID token (signature/iss/aud/azp/exp/iat/nonce),
-#* gate on email_verified, provision the user and create the session. The
-#* stored OIDC state is cleared up front so a code/state can never be replayed
+#* OIDC callback: auth0r::oidc_login_complete verifies the callback shape and
+#* state echo, exchanges the code (client secret + PKCE verifier) and validates
+#* the ID token (signature/iss/aud/azp/exp/iat/nonce); the route gates on
+#* email_verified, provisions the user and creates the session. The stored OIDC
+#* transaction is cleared up front so a code/state can never be replayed
 #* against the same session.
 #* @query code:string The authorization code
 #* @query state:string The state echo
@@ -44,41 +46,29 @@ function(request, response, server, datastore, query) {
     oidc <- datastore$session$oidc
     datastore$session$oidc <- NULL
 
-    if (!is.null(query$error) || is.null(oidc) || is.null(query$code) || !identical(query$state, oidc$state)) {
-        reason <- if (!is.null(query$error)) {
-            paste0("upstream error '", query$error, "'")
-        } else if (is.null(oidc)) {
-            "no pending OIDC state in the session"
-        } else if (is.null(query$code)) {
-            "missing code"
-        } else {
-            "state mismatch"
-        }
-        server$log("warning", paste0("login callback rejected: ", reason), request)
-        return(render_login_error(request, response, state))
-    }
-    tokens <- tryCatch(exchange_code(config, query$code, oidc$verifier), error = function(e) {
-        message <- gsub("\n", " ", conditionMessage(e), fixed = TRUE)
-        server$log("warning", paste0("login code exchange failed: ", message), request)
-        NULL
-    })
-    if (is.null(tokens)) {
-        return(render_login_error(request, response, state))
-    }
-    if (is.null(tokens$id_token) || is.null(tokens$access_token)) {
-        server$log("warning", "login token response is missing id_token or access_token", request)
-        return(render_login_error(request, response, state))
-    }
-    claims <- tryCatch(
-        validate_id_token(tokens$id_token, config, expected_nonce = oidc$nonce),
-        error = function(e) {
-            server$log("warning", paste0("login ID token rejected: ", conditionMessage(e)), request)
+    login <- tryCatch(
+        auth0r::oidc_login_complete(
+            app_auth0_client(config),
+            txn = oidc$txn,
+            params = query,
+            redirect_uri = oidc_redirect_uri(config),
+            fetch_userinfo = FALSE
+        ),
+        auth0r_login_error = function(e) {
+            reason <- paste0(
+                class(e)[1],
+                ": ",
+                gsub("\n", " ", conditionMessage(e), fixed = TRUE),
+                if (!is.null(e$upstream_error)) paste0(" (upstream '", e$upstream_error, "')") else ""
+            )
+            server$log("warning", paste0("login callback rejected: ", reason), request)
             NULL
         }
     )
-    if (is.null(claims)) {
+    if (is.null(login)) {
         return(render_login_error(request, response, state))
     }
+    claims <- login$claims
     if (!isTRUE(claims$email_verified)) {
         return(redirect(response, "/unverified"))
     }
@@ -94,19 +84,23 @@ function(request, response, server, datastore, query) {
         datastore,
         user = user,
         roles = roles,
-        tokens = tokens,
+        tokens = login$tokens,
         config = config,
-        picture = claims$picture
+        picture = claims$picture,
+        sid = claims$sid
     )
     redirect(response, oidc$next_path %||% "/home")
 }
 
 #* Sign out: revoke the refresh token at Auth0 (best effort), destroy the
-#* server-side session, clear client state, then finish the logout at Auth0 so
-#* its SSO cookie dies too. Outstanding BE access tokens stay valid until exp
-#* (bounded by the short TTL; documented tradeoff). POST (not GET) so the gate's
-#* CSRF + Origin checks apply - a public GET logout would be CSRFable. The navbar
-#* triggers it with an htmx POST, so the response uses HX-Redirect for htmx.
+#* server-side session, clear client state, then finish the logout at Auth0's
+#* OIDC /oidc/logout endpoint so its SSO cookie dies too. The session does not
+#* retain the ID token, so the logout hint is the session's OIDC `sid` claim
+#* (config$app_url must be in the application's Allowed Logout URLs).
+#* Outstanding BE access tokens stay valid until exp (bounded by the short TTL;
+#* documented tradeoff). POST (not GET) so the gate's CSRF + Origin checks
+#* apply - a public GET logout would be CSRFable. The navbar triggers it with
+#* an htmx POST, so the response uses HX-Redirect for htmx.
 #* @post /logout
 #* @serializer html
 function(request, response, server, datastore) {
@@ -125,12 +119,9 @@ function(request, response, server, datastore) {
     target <- if (config$bypass_auth || !nzchar(config$auth0$domain)) {
         "/login"
     } else {
-        paste0(
-            auth0_base_url(config$auth0$domain),
-            "/v2/logout?client_id=",
-            config$auth0$client_id,
-            "&returnTo=",
-            utils::URLencode(config$app_url, reserved = TRUE)
+        app_auth0_client(config)$logout_url(
+            return_to = config$app_url,
+            logout_hint = auth$sid
         )
     }
     redirect_htmx_aware(request, response, target)

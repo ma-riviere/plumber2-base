@@ -33,7 +33,10 @@ function(query, datastore, response) {
 #* @post /v1/datasets
 #* @serializer json
 function(body, datastore, response) {
-    require_scope(datastore, "write:datasets")
+    scope <- require_scope(datastore, response, "write:datasets")
+    if (!isTRUE(scope)) {
+        return(scope)
+    }
     principal <- request_principal(datastore, response)
     config <- app_config()
 
@@ -135,7 +138,10 @@ function(id, datastore, response) {
 #* @patch /v1/datasets/<id:integer>
 #* @serializer json
 function(id, body, datastore, response) {
-    require_scope(datastore, "write:datasets")
+    scope <- require_scope(datastore, response, "write:datasets")
+    if (!isTRUE(scope)) {
+        return(scope)
+    }
     principal <- request_principal(datastore, response)
     if (is.null(body$name) && is.null(body$description)) {
         reqres::abort_bad_request("nothing to update: provide name and/or description")
@@ -158,7 +164,10 @@ function(id, body, datastore, response) {
 #* @delete /v1/datasets/<id:integer>
 #* @serializer json
 function(id, datastore, response) {
-    require_scope(datastore, "write:datasets")
+    scope <- require_scope(datastore, response, "write:datasets")
+    if (!isTRUE(scope)) {
+        return(scope)
+    }
     principal <- request_principal(datastore, response)
     if (!db_delete_dataset(app_pool(), principal$user_id, id)) {
         reqres::abort_not_found("no such dataset")

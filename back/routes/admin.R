@@ -6,7 +6,10 @@
 #* @serializer json
 #* @noDoc
 function(datastore, response) {
-    require_scope(datastore, "view:admin")
+    scope <- require_scope(datastore, response, "view:admin")
+    if (!isTRUE(scope)) {
+        return(scope)
+    }
     request_principal(datastore, response)
     rows <- db_admin_users(app_pool())
     role_for <- function(row) {
@@ -42,7 +45,10 @@ function(datastore, response) {
 #* @serializer json
 #* @noDoc
 function(datastore, response) {
-    require_scope(datastore, "view:admin")
+    scope <- require_scope(datastore, response, "view:admin")
+    if (!isTRUE(scope)) {
+        return(scope)
+    }
     request_principal(datastore, response)
     permissions <- app_permissions()
     roles <- mgmt_client()$list_roles()
@@ -70,7 +76,10 @@ function(datastore, response) {
 #* @serializer json
 #* @noDoc
 function(id, body, datastore, response) {
-    require_scope(datastore, "manage:admin:roles")
+    scope <- require_scope(datastore, response, "manage:admin:roles")
+    if (!isTRUE(scope)) {
+        return(scope)
+    }
     principal <- request_principal(datastore, response)
     target <- get_user_by_id(app_pool(), as.integer(id))
     if (is.null(target)) {
@@ -116,7 +125,10 @@ function(id, body, datastore, response) {
 #* @serializer json
 #* @noDoc
 function(datastore, response) {
-    require_scope(datastore, "view:admin")
+    scope <- require_scope(datastore, response, "view:admin")
+    if (!isTRUE(scope)) {
+        return(scope)
+    }
     request_principal(datastore, response)
     rows <- db_admin_sessions(app_pool())
     list(
@@ -136,7 +148,10 @@ function(datastore, response) {
 #* @serializer json
 #* @noDoc
 function(query, datastore, response) {
-    require_scope(datastore, "view:admin")
+    scope <- require_scope(datastore, response, "view:admin")
+    if (!isTRUE(scope)) {
+        return(scope)
+    }
     request_principal(datastore, response)
     hours <- min(query$hours %||% 24L, 720L)
     rows <- db_admin_requests(app_pool(), hours)

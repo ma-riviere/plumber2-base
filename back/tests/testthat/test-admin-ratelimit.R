@@ -1,10 +1,13 @@
 # Admin endpoints (view:admin scope) + the rate limiter (bucket unit tests and
 # the enforcement routes).
 
-test_that("admin endpoints require the view:admin scope", {
+test_that("admin endpoints require the view:admin scope (RFC 6750 denial)", {
     ctx <- auth_api(bypass = TRUE) # guest has user scopes only
     for (path in c("/v1/admin/users", "/v1/admin/sessions", "/v1/admin/requests")) {
-        expect_equal(do_request(ctx$pa, paste0("http://t", path))$status, 403L)
+        res <- do_request(ctx$pa, paste0("http://t", path))
+        expect_equal(res$status, 403L)
+        expect_match(res$headers[["www-authenticate"]], 'error="insufficient_scope"', fixed = TRUE)
+        expect_match(res$headers[["content-type"]], "application/problem+json", fixed = TRUE)
     }
 })
 

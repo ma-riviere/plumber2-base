@@ -32,7 +32,7 @@ local({
 })
 
 config <- get_config()
-configure_jwks(auth0_base_url(config$auth0$domain))
+configure_jwks(auth0r::auth0_base_url(config$auth0$domain))
 
 cat(
     sprintf(

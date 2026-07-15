@@ -1,24 +1,13 @@
-# Auth0 OIDC client for the FE, built on auth0r (Auth0Client + Auth0Verifier).
-# This file keeps the app's config-first function signatures and owns the
-# process-wide client/verifier instances; all protocol logic (PKCE, form-encoded
-# client_secret_post exchange, full ID-token validation, JWKS caching, rotation
-# persist-before-return) lives in the package. Confidential client; both the
-# client secret and the PKCE verifier are sent to the token endpoint (RFC 9700
-# recommends PKCE even for confidential clients).
+# Auth0 OIDC client for the FE, built on auth0r (Auth0Client + Auth0Verifier +
+# the oidc_login_start/oidc_login_complete flow coordinator used by the auth
+# routes). This file keeps the app's config-first function signatures and owns
+# the process-wide client/verifier instances; all protocol logic (PKCE,
+# form-encoded client_secret_post exchange, full ID-token validation, JWKS
+# caching, rotation persist-before-return) lives in the package. Confidential
+# client; both the client secret and the PKCE verifier are sent to the token
+# endpoint (RFC 9700 recommends PKCE even for confidential clients).
 
 auth0_state <- new.env(parent = emptyenv())
-
-auth0_base_url <- function(domain) {
-    if (!nzchar(domain %||% "")) {
-        return("")
-    }
-    base <- if (grepl("^https?://", domain)) domain else paste0("https://", domain)
-    sub("/+$", "", base)
-}
-
-auth0_issuer <- function(domain) {
-    paste0(auth0_base_url(domain), "/")
-}
 
 # Reset the cached verifier; the next validation rebuilds it from the config.
 # (The verifier is resolved config-first at call time because this file is
@@ -32,11 +21,14 @@ configure_jwks <- function(base_url) {
 }
 
 # Tests inject a fixture fetcher (returning list(keys, max_age)); NULL resets
-# to the real HTTP fetcher.
+# to the real HTTP fetcher. The cached client is dropped too: it holds the
+# verifier instance, which must be rebuilt around the new fetcher.
 set_jwks_fetcher <- function(fetcher = NULL) {
     auth0_state$fixture_fetcher <- fetcher
     auth0_state$verifier_key <- NULL
     auth0_state$verifier <- NULL
+    auth0_state$client_key <- NULL
+    auth0_state$client <- NULL
     invisible()
 }
 
@@ -44,7 +36,7 @@ set_jwks_fetcher <- function(fetcher = NULL) {
 # requests); rebuilt when the config's tenant or the fixture fetcher changes.
 # An empty domain (bypass mode) yields a reject-everything verifier.
 app_verifier <- function(config) {
-    base_url <- auth0_base_url(config$auth0$domain)
+    base_url <- auth0r::auth0_base_url(config$auth0$domain)
     key <- paste0(base_url, "|", !is.null(auth0_state$fixture_fetcher))
     if (!identical(auth0_state$verifier_key, key)) {
         auth0_state$verifier <- auth0r::Auth0Verifier$new(
@@ -62,8 +54,10 @@ app_verifier <- function(config) {
 # request for long.
 AUTH0_TOKEN_TIMEOUT_SECONDS <- 5
 
-# One Auth0Client per (domain, client_id); rebuilt when the config changes
-# (test apps vary the fake tenant URL between builds).
+# One Auth0Client per (domain, client_id); rebuilt when the config or the
+# fixture fetcher changes (test apps vary the fake tenant URL between builds).
+# The client shares app_verifier's instance so oidc_login_complete validates
+# ID tokens against the same JWKS cache (and the test fixture fetcher).
 app_auth0_client <- function(config) {
     key <- paste0(config$auth0$domain, "|", config$auth0$client_id)
     if (!identical(auth0_state$client_key, key)) {
@@ -71,32 +65,18 @@ app_auth0_client <- function(config) {
             domain = config$auth0$domain,
             client_id = config$auth0$client_id,
             client_secret = config$auth0$client_secret,
-            timeout = AUTH0_TOKEN_TIMEOUT_SECONDS
+            timeout = AUTH0_TOKEN_TIMEOUT_SECONDS,
+            verifier = app_verifier(config)
         )
         auth0_state$client_key <- key
     }
     auth0_state$client
 }
 
-random_url_token <- auth0r::oauth_random_token
-
-pkce_challenge <- auth0r::pkce_challenge
-
-# offline_access requests the rotating refresh token; the API must have "Allow
-# Offline Access" enabled in Auth0.
-build_authorize_url <- function(config, state, nonce, challenge) {
-    app_auth0_client(config)$authorize_url(
-        redirect_uri = paste0(config$app_url, "/callback"),
-        scope = "openid profile email offline_access",
-        state = state,
-        nonce = nonce,
-        audience = config$auth0$audience,
-        code_challenge = challenge
-    )
-}
-
-exchange_code <- function(config, code, verifier) {
-    app_auth0_client(config)$exchange_code(code, paste0(config$app_url, "/callback"), verifier = verifier)
+# The exact callback URI registered for the application; also required at the
+# token exchange (RFC 6749 redirect_uri echo).
+oidc_redirect_uri <- function(config) {
+    paste0(config$app_url, "/callback")
 }
 
 refresh_access <- function(config, refresh_token) {
@@ -106,19 +86,6 @@ refresh_access <- function(config, refresh_token) {
 # Best-effort at logout; the server-side session is destroyed regardless.
 revoke_refresh_token <- function(config, refresh_token) {
     app_auth0_client(config)$revoke_refresh_token(refresh_token)
-}
-
-# Full OIDC validation (signature via tenant JWKS, exp/iat + freshness, iss,
-# aud/azp, nonce echo); see auth0r::Auth0Verifier. Returns the claims or stops
-# with a short reason (never echoing token contents).
-validate_id_token <- function(id_token, config, expected_nonce, leeway = 60, max_age = 600) {
-    app_verifier(config)$verify_id_token(
-        id_token,
-        client_id = config$auth0$client_id,
-        nonce = expected_nonce,
-        leeway = leeway,
-        max_token_age = max_age
-    )
 }
 
 # --- access-token freshness --------------------------------------------------
@@ -137,6 +104,8 @@ auth_expired <- function(message = "session authentication expired") {
 # near-expiry requests run strictly sequentially. On any expiry (refresh
 # rejected by rotation reuse detection, nothing stored) the session is
 # destroyed and the app-level fe_auth_expired condition forces a re-login.
+# Transient failures (Auth0 outage, rate limit, network) keep the session and
+# surface as a retryable 503-style fe_backend_error instead of a generic 500.
 ensure_fresh_access_token <- function(datastore, config, refresh_window = 60) {
     read_tokens <- function() {
         auth <- datastore$session$auth
@@ -170,6 +139,12 @@ ensure_fresh_access_token <- function(datastore, config, refresh_window = 60) {
         auth0r_auth_expired = function(e) {
             destroy_auth_session(datastore)
             stop(auth_expired(conditionMessage(e)))
+        },
+        auth0r_oauth_transport_error = function(e) {
+            stop(backend_error(503L, "Authentication service unreachable", conditionMessage(e)))
+        },
+        auth0r_oauth_http_error = function(e) {
+            stop(backend_error(503L, "Authentication service unavailable", conditionMessage(e)))
         }
     )
 }

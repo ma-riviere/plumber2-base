@@ -56,6 +56,18 @@ test_that("a rejected refresh (rotation reuse) destroys the session and raises",
     expect_null(ds$session$auth)
 })
 
+test_that("a transient refresh failure raises a retryable 503 and keeps the session", {
+    # Unreachable token endpoint = transport failure, NOT terminal expiry: the
+    # session must survive so the user retries instead of being logged out.
+    config <- test_config(domain = "http://127.0.0.1:1")
+    ds <- seeded_session(config)
+
+    err <- tryCatch(ensure_fresh_access_token(ds, config), error = function(e) e)
+    expect_s3_class(err, "fe_backend_error")
+    expect_equal(err$status, 503L)
+    expect_false(is.null(ds$session$auth))
+})
+
 test_that("guest sessions carry no token and never refresh", {
     config <- test_config()
     ds <- fake_datastore()

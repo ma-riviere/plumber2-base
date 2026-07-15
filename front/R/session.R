@@ -45,8 +45,9 @@ session_cookie_name <- function(is_prod) {
 
 # Create the authenticated session. `user` is a users-table row; `tokens` is the
 # Auth0 token response (NULL for guest sessions, which authenticate to the BE
-# via its bypass guard instead of a bearer token).
-create_auth_session <- function(datastore, user, roles, tokens, config, picture = NULL) {
+# via its bypass guard instead of a bearer token). `sid` is the ID token's OIDC
+# session id, kept as the logout hint (/logout does not retain the ID token).
+create_auth_session <- function(datastore, user, roles, tokens, config, picture = NULL, sid = NULL) {
     now <- as.numeric(Sys.time())
     auth <- list(
         user_id = as.integer(user$id),
@@ -54,6 +55,7 @@ create_auth_session <- function(datastore, user, roles, tokens, config, picture 
         email = if (!is.na(user$email)) user$email,
         nickname = if (!is.na(user$nickname)) user$nickname,
         picture = picture,
+        sid = sid,
         roles = roles,
         is_guest = isTRUE(user$is_guest),
         csrf_id = sodium::bin2hex(sodium::random(16)),
@@ -62,7 +64,7 @@ create_auth_session <- function(datastore, user, roles, tokens, config, picture 
     )
     if (!is.null(tokens)) {
         auth$access_token <- tokens$access_token
-        auth$access_expires_at <- now + (tokens$expires_in %||% 900)
+        auth$access_expires_at <- tokens$access_expires_at %||% (now + (tokens$expires_in %||% 900))
         if (!is.null(tokens$refresh_token)) {
             auth$refresh_token_enc <- encrypt_secret(tokens$refresh_token, refresh_key(config))
         }

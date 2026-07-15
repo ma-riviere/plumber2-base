@@ -111,7 +111,7 @@ test_that("scalar_field trims and drops empties", {
     expect_equal(scalar_field(c("a", "b")), "a")
 })
 
-test_that("mgmt_token is cached until expiry and mgmt_update_nickname PATCHes the sub", {
+test_that("the mgmt token is fetched once and mgmt_update_nickname PATCHes the sub", {
     fixture <- new_jwt_fixture()
     tenant <- local_auth0_fake(fixture)
     reset_mgmt_cache()
@@ -120,13 +120,12 @@ test_that("mgmt_token is cached until expiry and mgmt_update_nickname PATCHes th
     config$auth0$mgmt_client_id <- "m2m-client"
     config$auth0$mgmt_client_secret <- "m2m-secret"
 
-    expect_equal(mgmt_token(config), "mgmt-token-1")
-    expect_equal(mgmt_token(config), "mgmt-token-1")
-    expect_equal(tenant$stats()$n_mgmt_token, 1L)
-
     mgmt_update_nickname(config, "auth0|fe-user", "neo")
+    mgmt_update_nickname(config, "auth0|fe-user", "trinity")
     stats <- tenant$stats()
-    expect_equal(stats$n_mgmt_patch, 1L)
-    expect_equal(stats$last_patch$nickname, "neo")
+    # Auth0Management caches the client-credentials token across calls.
+    expect_equal(stats$n_mgmt_token, 1L)
+    expect_equal(stats$n_mgmt_patch, 2L)
+    expect_equal(stats$last_patch$nickname, "trinity")
     expect_equal(stats$last_patch$id, "auth0|fe-user")
 })

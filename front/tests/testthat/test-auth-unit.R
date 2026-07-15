@@ -77,36 +77,36 @@ test_that("is_safe_next only accepts local absolute paths", {
 
 test_that("the authorize URL carries the full OIDC + PKCE parameter set", {
     config <- test_config()
-    url <- build_authorize_url(config, state = "st-1", nonce = "no-1", challenge = "ch-1")
-    expect_match(url, "^https://tenant.test/authorize\\?")
-    query <- httr2::url_parse(url)$query
+    login_start <- auth0r::oidc_login_start(
+        app_auth0_client(config),
+        redirect_uri = oidc_redirect_uri(config),
+        scope = "openid profile email offline_access",
+        audience = config$auth0$audience
+    )
+    expect_match(login_start$url, "^https://tenant.test/authorize\\?")
+    query <- httr2::url_parse(login_start$url)$query
     expect_equal(query$response_type, "code")
     expect_equal(query$client_id, "fe-client")
     expect_equal(query$redirect_uri, "http://t/callback")
     expect_equal(query$scope, "openid profile email offline_access")
     expect_equal(query$audience, "https://base-api.test")
-    expect_equal(query$state, "st-1")
-    expect_equal(query$nonce, "no-1")
-    expect_equal(query$code_challenge, "ch-1")
+    expect_equal(query$state, login_start$txn$state)
+    expect_equal(query$nonce, login_start$txn$nonce)
+    expect_equal(query$code_challenge, auth0r::pkce_challenge(login_start$txn$verifier))
     expect_equal(query$code_challenge_method, "S256")
-})
-
-test_that("pkce_challenge is the base64url SHA-256 of the verifier", {
-    verifier <- "test-verifier"
-    expect_equal(
-        pkce_challenge(verifier),
-        jose::base64url_encode(openssl::sha256(charToRaw(verifier)))
-    )
 })
 
 test_that("a valid ID token yields its claims", {
     fixture <- new_jwt_fixture()
     use_fixture_jwks(fixture)
     config <- test_config()
-    iss <- auth0_issuer(config$auth0$domain)
+    iss <- paste0(auth0r::auth0_base_url(config$auth0$domain), "/")
+    validate <- function(token, nonce = "no-1") {
+        app_verifier(config)$verify_id_token(token, client_id = config$auth0$client_id, nonce = nonce)
+    }
 
     token <- sign_id_token(fixture, iss = iss, nonce = "no-1", roles = "admin")
-    claims <- validate_id_token(token, config, expected_nonce = "no-1")
+    claims <- validate(token)
     expect_equal(claims$sub, "auth0|fe-user")
     expect_equal(claims$nickname, "tester")
     expect_true(claims$email_verified)
@@ -117,12 +117,15 @@ test_that("each forged or invalid ID token variant is rejected with its reason",
     fixture <- new_jwt_fixture()
     use_fixture_jwks(fixture)
     config <- test_config()
-    iss <- auth0_issuer(config$auth0$domain)
+    iss <- paste0(auth0r::auth0_base_url(config$auth0$domain), "/")
     now <- as.numeric(Sys.time())
+    validate <- function(token, nonce = "no-1") {
+        app_verifier(config)$verify_id_token(token, client_id = config$auth0$client_id, nonce = nonce)
+    }
     sign <- function(...) sign_id_token(fixture, iss = iss, nonce = "no-1", ...)
-    reject <- function(token, reason) expect_error(validate_id_token(token, config, "no-1"), reason)
+    reject <- function(token, reason) expect_error(validate(token), reason)
 
-    expect_error(validate_id_token("not-a-jwt", config, "no-1"), "malformed")
+    expect_error(validate("not-a-jwt"), "malformed")
     reject(sign_id_token(fixture, iss = "https://evil.test/", nonce = "no-1"), "bad iss")
     reject(sign(aud = "other-client"), "bad aud")
     reject(sign(extra_claims = list(azp = "other-client")), "bad azp")
@@ -131,7 +134,7 @@ test_that("each forged or invalid ID token variant is rejected with its reason",
     reject(sign(iat = now - 3600), "stale iat")
     reject(sign(kid = "unknown-kid"), "unknown kid")
     expect_error(
-        validate_id_token(sign_id_token(fixture, iss = iss, nonce = "other-nonce"), config, "no-1"),
+        validate(sign_id_token(fixture, iss = iss, nonce = "other-nonce")),
         "nonce mismatch"
     )
     other <- new_jwt_fixture()
@@ -140,7 +143,7 @@ test_that("each forged or invalid ID token variant is rejected with its reason",
     enc <- function(x) jose::base64url_encode(charToRaw(yyjsonr::write_json_str(x, auto_unbox = TRUE)))
     payload <- enc(list(iss = iss, aud = "fe-client", sub = "u", exp = now + 600, iat = now, nonce = "no-1"))
     none_token <- paste0(enc(list(alg = "none", typ = "JWT", kid = fixture$kid)), ".", payload, ".x")
-    expect_error(validate_id_token(none_token, config, "no-1"), "none")
+    expect_error(validate(none_token), "none")
 })
 
 test_that("session_auth destroys idle- and absolutely-expired sessions", {

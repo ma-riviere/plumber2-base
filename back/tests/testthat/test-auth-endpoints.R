@@ -1,8 +1,10 @@
 # End-to-end auth through the real assembled api (constructor + route files +
 # central /v1/* rules), in-process. Fixture JWKS, scratch-schema pool. The status
-# contract (spike findings 1-3 + fireproof source): no credential -> 401 with
-# WWW-Authenticate (bearer reject runs last in the api_key || jwt flow), a
-# presented-but-invalid credential -> 403, valid -> 200.
+# contract (RFC 6750 via auth0r 0.4.0's revalidating bearer guard): no
+# credential -> 401 with a bare Bearer challenge (bearer reject runs last in the
+# api_key || jwt flow), an attempted-but-invalid bearer token -> 401 with
+# error="invalid_token", an invalid API key -> 403 (fireproof's key contract,
+# untouched by the bearer override), valid -> 200.
 
 test_that("dev api does not trust X-Forwarded-* headers (prod-only, behind Traefik)", {
     ctx <- auth_api()
@@ -77,7 +79,7 @@ test_that("a role-less JWT gets the default user scopes (parity choice)", {
     )
 })
 
-test_that("expired, unverified-email and wrong-audience JWTs are 403", {
+test_that("expired, unverified-email and wrong-audience JWTs are 401 invalid_token", {
     ctx <- auth_api()
     expired <- sign_access_token(ctx$fixture, exp = as.numeric(Sys.time()) - 120)
     unverified <- sign_access_token(ctx$fixture, email_verified = FALSE)
@@ -85,17 +87,21 @@ test_that("expired, unverified-email and wrong-audience JWTs are 403", {
     wrong_aud <- sign_access_token(ctx$fixture, aud = "https://other.api")
 
     for (bad in list(expired, unverified, no_verified_claim, wrong_aud)) {
-        expect_equal(do_request(ctx$pa, "http://t/v1/me", headers = bearer_header(bad))$status, 403L)
+        res <- do_request(ctx$pa, "http://t/v1/me", headers = bearer_header(bad))
+        expect_equal(res$status, 401L)
+        expect_match(res$headers[["www-authenticate"]], 'error="invalid_token"', fixed = TRUE)
     }
 })
 
-test_that("JWTs missing client_id or jti are 403 (guard runs the rfc9068 profile)", {
+test_that("JWTs missing client_id or jti are 401 invalid_token (rfc9068 profile)", {
     ctx <- auth_api()
     no_client_id <- sign_access_token(ctx$fixture, client_id = NULL)
     no_jti <- sign_access_token(ctx$fixture, jti = NULL)
 
     for (bad in list(no_client_id, no_jti)) {
-        expect_equal(do_request(ctx$pa, "http://t/v1/me", headers = bearer_header(bad))$status, 403L)
+        res <- do_request(ctx$pa, "http://t/v1/me", headers = bearer_header(bad))
+        expect_equal(res$status, 401L)
+        expect_match(res$headers[["www-authenticate"]], 'error="invalid_token"', fixed = TRUE)
     }
 })
 
