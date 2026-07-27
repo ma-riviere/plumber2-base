@@ -34,6 +34,9 @@
             element.querySelectorAll(".file-dropzone-file").forEach(function (label) {
                 label.textContent = "";
             });
+            element.querySelectorAll(".upload-single-fields").forEach(function (fields) {
+                fields.classList.remove("d-none");
+            });
             var modal = window.bootstrap && window.bootstrap.Modal.getInstance(element);
             if (modal) modal.hide();
         });
@@ -41,13 +44,18 @@
 
     // File dropzone (upload modal): a dashed target wrapping a hidden file
     // input. Clicking opens the picker natively; drag&drop assigns the dropped
-    // files to the input and mirrors the chosen filename. Delegated so it works
-    // for modals rendered at any time.
+    // files to the input and mirrors the chosen filenames. Delegated so it
+    // works for modals rendered at any time.
     function updateDropzoneName(input) {
         var zone = input.closest(".file-dropzone");
         if (!zone) return;
+        var names = input.files ? Array.prototype.map.call(input.files, function (file) { return file.name; }) : [];
         var label = zone.querySelector(".file-dropzone-file");
-        if (label) label.textContent = input.files && input.files.length ? input.files[0].name : "";
+        if (label) label.textContent = names.join(", ");
+        // Several files upload as one dataset each, named after their own file:
+        // the optional name/description no longer apply.
+        var fields = input.form && input.form.querySelector(".upload-single-fields");
+        if (fields) fields.classList.toggle("d-none", names.length > 1);
     }
 
     document.addEventListener("change", function (event) {

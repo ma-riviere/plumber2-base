@@ -9,7 +9,7 @@
 # Row-count slider ceiling; mirrors the backend upload cap (back/R/config.R
 # max_dataset_rows). Fixed rather than data-derived: /v1/datasets is filtered
 # and capped at 100 items, so the response cannot provide a global max.
-HOME_MAX_ROWS <- 50000L
+HOME_MAX_ROWS <- 500000L
 
 # Normalized filter state from the query params (empty strings dropped).
 # min_rows has no UI control (single-thumb slider, accepted divergence from
@@ -343,6 +343,7 @@ upload_modal <- function(lang, translations) {
                     id = "upload-file",
                     name = "file",
                     accept = ".csv,text/csv",
+                    multiple = NA,
                     required = NA
                 ),
                 bs_icon("cloud-arrow-up", class = "file-dropzone-icon"),
@@ -352,32 +353,37 @@ upload_modal <- function(lang, translations) {
                 ),
                 htmltools::tags$span(
                     class = "file-dropzone-hint",
-                    tr("CSV only, max 10MB per file", lang, translations)
+                    tr("CSV only, max 100MB per file", lang, translations)
                 ),
                 htmltools::tags$span(class = "file-dropzone-file", id = "upload-file-name")
             )
         ),
+        # Only meaningful for a single file: a multi-file selection uploads one
+        # dataset per file, named after it, so app.js hides this block.
         htmltools::div(
-            class = "mb-3",
-            htmltools::tags$label(
-                class = "form-label",
-                `for` = "upload-name",
-                tr("Name (optional)", lang, translations)
+            class = "upload-single-fields",
+            htmltools::div(
+                class = "mb-3",
+                htmltools::tags$label(
+                    class = "form-label",
+                    `for` = "upload-name",
+                    tr("Name (optional)", lang, translations)
+                ),
+                htmltools::tags$input(type = "text", class = "form-control", id = "upload-name", name = "name")
             ),
-            htmltools::tags$input(type = "text", class = "form-control", id = "upload-name", name = "name")
-        ),
-        htmltools::div(
-            class = "mb-3",
-            htmltools::tags$label(
-                class = "form-label",
-                `for` = "upload-description",
-                tr("Description (optional)", lang, translations)
-            ),
-            htmltools::tags$textarea(
-                class = "form-control",
-                id = "upload-description",
-                name = "description",
-                rows = "2"
+            htmltools::div(
+                class = "mb-3",
+                htmltools::tags$label(
+                    class = "form-label",
+                    `for` = "upload-description",
+                    tr("Description (optional)", lang, translations)
+                ),
+                htmltools::tags$textarea(
+                    class = "form-control",
+                    id = "upload-description",
+                    name = "description",
+                    rows = "2"
+                )
             )
         ),
         htmltools::div(id = "upload-status")

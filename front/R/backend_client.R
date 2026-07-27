@@ -140,6 +140,15 @@ safe_upload_filename <- function(filename) {
 
 # --- multipart helpers ---------------------------------------------------------
 
+# The parsed body keeps one entry per multipart part, duplicate names included,
+# so a multi-file upload arrives as several "file" entries (`body$file` would
+# only ever see the first). Parts without a filename come from an untouched file
+# input and are dropped.
+upload_file_parts <- function(body) {
+    parts <- body[names(body) == "file"]
+    parts[vapply(parts, \(part) nzchar(attr(part, "filename") %||% ""), logical(1))]
+}
+
 # plumber2's multipart parser sub-parses text/csv parts into a data.frame and
 # leaves unknown content types (some browsers send application/vnd.ms-excel or
 # octet-stream for .csv) as raw bytes. Normalize both to the CSV bytes the

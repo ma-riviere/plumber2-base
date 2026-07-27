@@ -64,7 +64,7 @@ test_that("/partials/home/datasets filters and pushes the canonical /home URL", 
     # a slider at the ceiling is treated as no filter).
     stale <- do_request(
         pa,
-        "http://t/partials/home/datasets?min_rows=40&max_rows=50000",
+        "http://t/partials/home/datasets?min_rows=40&max_rows=500000",
         headers = list(Cookie = cookie, HX_Request = "true")
     )
     expect_equal(stale$headers[["hx-push-url"]], "/home")
@@ -112,6 +112,46 @@ test_that("the upload proxy closes the modal, refreshes the panel and toasts", {
     expect_match(res$headers[["hx-trigger"]], "fb:refresh-datasets")
     expect_match(res$body, "hx-swap-oob", fixed = TRUE)
     expect_match(res$body, "Dataset uploaded successfully", fixed = TRUE)
+})
+
+test_that("an upload with several files creates one dataset per file", {
+    pa <- local_front_api()
+    session <- guest_session(pa)
+
+    boundary <- "----feTestBoundary"
+    part <- function(filename, content) {
+        paste0(
+            "--",
+            boundary,
+            "\r\n",
+            sprintf('Content-Disposition: form-data; name="file"; filename="%s"', filename),
+            "\r\n",
+            "Content-Type: text/csv\r\n\r\n",
+            content,
+            "\r\n"
+        )
+    }
+    body <- paste0(
+        part("first.csv", "a,b\n1,2\n"),
+        part("second.csv", "c,d\n3,4\n"),
+        "--",
+        boundary,
+        "--\r\n"
+    )
+    res <- do_request(
+        pa,
+        "http://t/datasets/upload",
+        method = "post",
+        headers = action_headers(
+            session,
+            Content_Type = paste0("multipart/form-data; boundary=", boundary)
+        ),
+        content = body
+    )
+
+    expect_equal(res$status, 200L)
+    expect_match(res$headers[["hx-trigger"]], "fb:close-modal")
+    expect_match(res$body, "2 datasets uploaded successfully", fixed = TRUE)
 })
 
 test_that("an upload without a file part answers 422 with an alert fragment", {

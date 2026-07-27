@@ -71,9 +71,11 @@ function(id, request, response, server, datastore, query) {
     })
 }
 
-#* Upload a CSV dataset (multipart proxy to the backend). Success closes the
-#* modal and refreshes the dataset panel; backend rejections (413/415/422)
-#* come back as an alert swapped into #upload-status.
+#* Upload one CSV dataset per selected file (multipart proxy to the backend).
+#* Success closes the modal and refreshes the dataset panel; backend rejections
+#* (413/415/422) come back as an alert swapped into #upload-status. A partial
+#* multi-file failure answers 200 so the panel still refreshes, with the failed
+#* files listed in the alert.
 #* @parser multi
 #* @post /datasets/upload
 #* @serializer html
@@ -81,36 +83,80 @@ function(request, response, server, datastore, body) {
     state <- server$get_data("state")
     lang <- resolve_lang(request, state$translations)
     with_fe_errors(request, response, state, datastore, {
-        file_part <- body$file
-        if (is.null(file_part)) {
+        parts <- upload_file_parts(body)
+        invalid_csv <- tr("Please select a valid CSV file", lang, state$translations)
+        if (length(parts) == 0) {
             response$status <- 422L
-            return(render_error_alert(
-                backend_error(422L, "", tr("Please select a valid CSV file", lang, state$translations)),
-                lang,
-                state$translations
-            ))
+            return(render_error_alert(backend_error(422L, "", invalid_csv), lang, state$translations))
         }
-        filename <- attr(file_part, "filename") %||% "dataset.csv"
-        csv_bytes <- part_as_csv_bytes(file_part)
-        if (is.null(csv_bytes)) {
-            response$status <- 422L
-            return(render_error_alert(
-                backend_error(422L, "", tr("Please select a valid CSV file", lang, state$translations)),
-                lang,
-                state$translations
-            ))
+        # A lone file honors the optional name/description; several files each
+        # become a dataset named after their own file (the backend's default).
+        single <- length(parts) == 1
+        uploaded <- 0L
+        failures <- character()
+        first_status <- NULL
+        for (part in parts) {
+            filename <- attr(part, "filename") %||% "dataset.csv"
+            csv_bytes <- part_as_csv_bytes(part)
+            failure <- if (is.null(csv_bytes)) {
+                backend_error(422L, "", invalid_csv)
+            } else {
+                tryCatch(
+                    {
+                        be_upload_dataset(
+                            state,
+                            datastore,
+                            csv_bytes,
+                            filename = filename,
+                            name = if (single) scalar_field(body$name),
+                            description = if (single) scalar_field(body$description)
+                        )
+                        NULL
+                    },
+                    fe_backend_error = \(e) e
+                )
+            }
+            if (is.null(failure)) {
+                uploaded <- uploaded + 1L
+                next
+            }
+            detail <- if (nzchar(failure$detail)) failure$detail else failure$title
+            failures <- c(
+                failures,
+                if (single) {
+                    detail
+                } else {
+                    sprintf(tr("%s: Error saving - %s", lang, state$translations), filename, detail)
+                }
+            )
+            first_status <- first_status %||% failure$status
         }
-        be_upload_dataset(
-            state,
-            datastore,
-            csv_bytes,
-            filename = filename,
-            name = scalar_field(body$name),
-            description = scalar_field(body$description)
-        )
-        response$set_header("HX-Trigger", "fb:close-modal, fb:refresh-datasets")
         set_html_headers(response)
-        render_toast(tr("Dataset uploaded successfully", lang, state$translations), "success")
+        if (length(failures) > 0) {
+            alert <- render_error_alert(
+                backend_error(first_status, "", paste(failures, collapse = "; ")),
+                lang,
+                state$translations
+            )
+            if (uploaded == 0L) {
+                response$status <- first_status
+                return(alert)
+            }
+            response$set_header("HX-Trigger", "fb:refresh-datasets")
+            toast <- sprintf(
+                tr("%s of %s datasets uploaded", lang, state$translations),
+                uploaded,
+                uploaded + length(failures)
+            )
+            return(paste0(alert, render_toast(toast, "warning")))
+        }
+        response$set_header("HX-Trigger", "fb:close-modal, fb:refresh-datasets")
+        message <- if (uploaded == 1L) {
+            tr("Dataset uploaded successfully", lang, state$translations)
+        } else {
+            sprintf(tr("%s datasets uploaded successfully", lang, state$translations), uploaded)
+        }
+        render_toast(message, "success")
     })
 }
 

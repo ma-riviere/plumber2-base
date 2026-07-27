@@ -761,8 +761,8 @@
             "fr": "Glissez-déposez, ou cliquez pour parcourir"
         },
         {
-            "en": "CSV only, max 10MB per file",
-            "fr": "CSV uniquement, 10 Mo max par fichier"
+            "en": "CSV only, max 100MB per file",
+            "fr": "CSV uniquement, 100 Mo max par fichier"
         }
     ]
 }

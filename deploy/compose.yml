@@ -50,7 +50,7 @@ services:
       # per-service (not shared): a middleware referenced across containers
       # vanishes with its defining container, 500ing the other router while
       # this one restarts.
-      traefik.http.middlewares.pb-back-buffering.buffering.maxRequestBodyBytes: "12582912"
+      traefik.http.middlewares.pb-back-buffering.buffering.maxRequestBodyBytes: "125829120"
     networks:
       - edge
       - postgres
@@ -94,7 +94,7 @@ services:
       traefik.http.routers.pb-front.middlewares: pb-front-buffering
       # Same 12MB buffering as the back, defined on THIS container so the
       # front router keeps its middleware while the back restarts.
-      traefik.http.middlewares.pb-front-buffering.buffering.maxRequestBodyBytes: "12582912"
+      traefik.http.middlewares.pb-front-buffering.buffering.maxRequestBodyBytes: "125829120"
       traefik.http.services.pb-front.loadbalancer.server.port: "8080"
       # Immutable cache headers for the fingerprinted statics, scoped to
       # /static via a dedicated router (longer rule = higher priority, same

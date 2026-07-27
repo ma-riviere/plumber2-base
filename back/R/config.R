@@ -23,11 +23,11 @@ get_config <- function() {
         # always dispatches first, so no in-app pre-auth limiter can exist.
         rate_limit_uploads_per_min = env_int("RATE_LIMIT_UPLOADS_PER_MIN", 10L),
         rate_limit_fits_per_min = env_int("RATE_LIMIT_FITS_PER_MIN", 6L),
-        # Layered upload limits: Traefik buffering (~12MB) > this byte cap >
+        # Layered upload limits: Traefik buffering (~120MB) > this byte cap >
         # parsed row/col caps.
-        max_upload_bytes = env_int("MAX_UPLOAD_BYTES", 10485760L),
-        max_dataset_rows = env_int("MAX_DATASET_ROWS", 50000L),
-        max_dataset_cols = env_int("MAX_DATASET_COLS", 100L),
+        max_upload_bytes = env_int("MAX_UPLOAD_BYTES", 104857600L),
+        max_dataset_rows = env_int("MAX_DATASET_ROWS", 500000L),
+        max_dataset_cols = env_int("MAX_DATASET_COLS", 1000L),
         max_jobs_per_user = env_int("MAX_JOBS_PER_USER", 2L),
         # A runaway fit must not hold a mirai daemon forever: the dispatcher
         # cancels it after this walltime and the job is failed.
