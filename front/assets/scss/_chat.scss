@@ -77,6 +77,31 @@
         background-color: $gray-200;
         overflow-x: auto;
     }
+    // The sanitizer emits bare table tags (no classes), and the panel is narrow:
+    // `display: block` is what makes a wide table scroll inside its bubble
+    // instead of stretching the widget.
+    table {
+        display: block;
+        width: max-content;
+        max-width: 100%;
+        margin-bottom: $spacing-sm;
+        overflow-x: auto;
+        border-collapse: collapse;
+        font-size: 0.8125rem;
+    }
+
+    th,
+    td {
+        padding: 0.15rem $spacing-xs;
+        border: 1px solid $gray-300;
+        text-align: left;
+        white-space: nowrap;
+    }
+
+    th {
+        background-color: $gray-200;
+        font-weight: 600;
+    }
 }
 
 .chat-chip {

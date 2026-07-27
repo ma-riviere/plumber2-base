@@ -117,6 +117,22 @@
         }
     });
 
+    // Ctrl/Cmd+Enter sends the prompt; a bare Enter keeps the textarea's own
+    // behaviour (newline). requestSubmit fires the submit event htmx listens
+    // for, so the form's hx-post attributes stay the single source of truth.
+    document.addEventListener("keydown", function (event) {
+        if (event.key !== "Enter" || !(event.ctrlKey || event.metaKey)) return;
+        var input = event.target;
+        if (!input.id || input.id !== "chat-message") return;
+        event.preventDefault();
+        var form = input.form;
+        if (!form) return;
+        // hx-disabled-elt disables the send button while a turn is in flight.
+        var submit = form.querySelector('button[type="submit"]');
+        if (submit && submit.disabled) return;
+        form.requestSubmit();
+    });
+
     // Keep the newest chat message in view: the transcript is re-rendered whole
     // on every poll, which resets the scroll position.
     document.addEventListener("htmx:afterSwap", function () {

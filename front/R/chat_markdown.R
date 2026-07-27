@@ -32,11 +32,28 @@ CHAT_ALLOWED_TAGS <- c(
     "h3",
     "h4",
     "h5",
-    "h6"
+    "h6",
+    "table",
+    "thead",
+    "tbody",
+    "tr",
+    "th",
+    "td"
 )
 
+# GFM extensions, minus `tasklist` (its checkbox <input> is dropped by the
+# allowlist, which would leave the item with no state marker at all - as plain
+# text the `[x]` / `[ ]` prefix at least survives) and minus `footnotes` (its
+# anchors would be stripped to bare <a>, leaving dangling markers).
+CHAT_MARKDOWN_EXTENSIONS <- c("table", "strikethrough", "autolink", "tagfilter")
+
 chat_render_markdown <- function(text) {
-    html <- commonmark::markdown_html(text, hardbreaks = TRUE, smart = FALSE)
+    html <- commonmark::markdown_html(
+        text,
+        hardbreaks = TRUE,
+        smart = FALSE,
+        extensions = CHAT_MARKDOWN_EXTENSIONS
+    )
     chat_sanitize_html(html)
 }
 

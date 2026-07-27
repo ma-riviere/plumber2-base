@@ -9,6 +9,15 @@ test_that("ordinary markdown renders to the allowed tags", {
     expect_match(html, "<li>one</li>", fixed = TRUE)
 })
 
+test_that("GFM tables render as table markup", {
+    html <- chat_render_markdown("| Species | Mean |\n|---|---:|\n| setosa | 5.01 |\n")
+    expect_match(html, "<table>", fixed = TRUE)
+    expect_match(html, "<th>Species</th>", fixed = TRUE)
+    expect_match(html, "<td>5.01</td>", fixed = TRUE)
+    # Column alignment rides on an align= attribute, which the allowlist drops.
+    expect_false(grepl("align=", html, fixed = TRUE))
+})
+
 test_that("raw HTML in model output never survives", {
     html <- chat_render_markdown('Hi <script>alert(1)</script> and <iframe src="x"></iframe> done')
     expect_false(grepl("<script", html, fixed = TRUE))

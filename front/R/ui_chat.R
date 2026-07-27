@@ -141,6 +141,7 @@ chat_form_html <- function(dataset_id, lang, translations, oob = FALSE) {
             type = "submit",
             class = "btn btn-primary btn-sm align-self-end",
             `aria-label` = tr("Send", lang, translations),
+            title = tr("Send (Ctrl+Enter)", lang, translations),
             bs_icon("send")
         )
     ))
