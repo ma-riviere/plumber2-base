@@ -124,6 +124,16 @@
         if (stream) stream.scrollTop = stream.scrollHeight;
     });
 
+    // Chat failure fragments (model unavailable, session busy) answer 503 with
+    // an in-widget notice; without this override the global 5xx handling below
+    // would drop the notice and only show the generic toast.
+    document.addEventListener("htmx:beforeSwap", function (event) {
+        if (event.detail.xhr.status !== 503) return;
+        if (!event.detail.target || !event.detail.target.closest("#chat-widget")) return;
+        event.detail.shouldSwap = true;
+        event.detail.isError = false;
+    });
+
     // 5xx and network failures are configured not to swap (see the htmx-config
     // meta tag); surface them as a toast instead of failing silently.
     function serverErrorToast() {
