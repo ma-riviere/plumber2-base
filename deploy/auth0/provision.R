@@ -44,8 +44,16 @@ action_name <- "plumber2-base-post-login"
 # post-logout exposure window.
 access_token_lifetime <- 900L
 # read:roles covers role listing AND is required alongside update:users for
-# assigning/removing user roles (the BE admin role endpoints).
-mgmt_scopes <- c("read:users", "update:users", "read:roles")
+# assigning/removing user roles (the BE admin role endpoints). The ban flow only
+# needs update:users (the block alone denies every new token, incl. refresh
+# exchanges; the session/refresh-token revocation endpoints are plan-gated and
+# not called), and the events poller needs read:events.
+mgmt_scopes <- c(
+    "read:users",
+    "update:users",
+    "read:roles",
+    "read:events"
+)
 
 keys_env_path <- path.expand("~/.keys/.auth0")
 script_dir <- dirname(sub("--file=", "", grep("^--file=", commandArgs(FALSE), value = TRUE)[1], fixed = TRUE))

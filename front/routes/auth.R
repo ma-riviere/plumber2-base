@@ -46,6 +46,7 @@ function(request, response, server, datastore, query) {
     oidc <- datastore$session$oidc
     datastore$session$oidc <- NULL
 
+    blocked_login <- FALSE
     login <- tryCatch(
         auth0r::oidc_login_complete(
             app_auth0_client(config),
@@ -61,12 +62,17 @@ function(request, response, server, datastore, query) {
                 gsub("\n", " ", conditionMessage(e), fixed = TRUE),
                 if (!is.null(e$upstream_error)) paste0(" (upstream '", e$upstream_error, "')") else ""
             )
+            # Banned accounts: Auth0 refuses the login upstream with
+            # error=unauthorized / "user is blocked"; only the canned message is
+            # rendered, never the attacker-influenced description.
+            blocked_login <<- identical(e$upstream_error, "unauthorized") &&
+                grepl("blocked", e$upstream_error_description %||% "", fixed = TRUE)
             server$log("warning", paste0("login callback rejected: ", reason), request)
             NULL
         }
     )
     if (is.null(login)) {
-        return(render_login_error(request, response, state))
+        return(render_login_error(request, response, state, blocked = blocked_login))
     }
     claims <- login$claims
     if (!isTRUE(claims$email_verified)) {

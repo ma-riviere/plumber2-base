@@ -9,6 +9,7 @@
 #   manage:keys         issue/list/revoke API keys (jwt-only endpoints; NEVER key-grantable)
 #   view:admin          admin endpoints (users/request stats/role listing)
 #   manage:admin:roles  change users' Auth0 roles (admin ONLY; NEVER key-grantable)
+#   manage:admin:users  ban/unban users (admin ONLY; NEVER key-grantable)
 
 scopes:
   - write:datasets
@@ -16,6 +17,7 @@ scopes:
   - manage:keys
   - view:admin
   - manage:admin:roles
+  - manage:admin:users
 
 roles:
   admin: "*"

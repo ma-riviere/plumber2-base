@@ -17,6 +17,19 @@ run_maintenance <- function(config) {
         if (!is.na(pruned) && pruned > 0) {
             cat(sprintf("[back] pruned %d request_log row(s)\n", pruned), file = stderr())
         }
+        # Catch-up for bans performed by shiny-base: it shares users.status but
+        # has no visibility into this app's private api_keys table, so it can
+        # only flip the status. Bans issued here already delete the keys inline.
+        dropped <- tryCatch(
+            DBI::dbExecute(
+                pool,
+                "DELETE FROM api_keys k USING users u WHERE u.id = k.user_id AND u.status <> 'active'"
+            ),
+            error = function(e) NA_integer_
+        )
+        if (!is.na(dropped) && dropped > 0) {
+            cat(sprintf("[back] deleted %d api_key(s) of inactive user(s)\n", dropped), file = stderr())
+        }
     }
     sweep_rate_buckets()
     invisible()

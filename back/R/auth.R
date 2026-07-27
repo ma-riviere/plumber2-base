@@ -220,6 +220,15 @@ request_principal <- function(datastore, response) {
     if (is.null(user)) {
         reqres::abort_http_problem(500L, detail = "no user record backs this credential")
     }
+    # Single cross-app enforcement chokepoint for users.status (shiny-base writes
+    # the same shared column). Guests are 'active' by construction. No extra
+    # query: the principal's user row is already read here, once per request.
+    if (!identical(user$status, "active")) {
+        reqres::abort_http_problem(
+            403L,
+            detail = if (identical(user$status, "deleted")) "account_deleted" else "account_banned"
+        )
+    }
     resolved <- list(
         guard = principal$guard,
         scopes = principal$scopes,

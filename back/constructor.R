@@ -20,7 +20,8 @@ for (helper in c(
     "jobs.R",
     "ratelimit.R",
     "request_log.R",
-    "maintenance.R"
+    "maintenance.R",
+    "events_sync.R"
 )) {
     source(file.path("R", helper), local = FALSE)
 }
@@ -82,6 +83,8 @@ on_start <- function(server, ...) {
     db_recover_stale_jobs(app_pool())
     # Hourly tick: request_log retention pruning + rate-bucket sweep.
     schedule_maintenance(config)
+    # 5-minute tick: mirror Auth0-side bans/deletions into users.status.
+    schedule_events_sync(config)
     invisible()
 }
 

@@ -2,7 +2,7 @@
 # (email, nickname) at login; the BE only guarantees a row exists so resources
 # can be owned, and keeps last_seen_at fresh.
 
-USER_COLUMNS <- "id, auth0_sub, email, nickname, is_guest, created_at, last_seen_at"
+USER_COLUMNS <- "id, auth0_sub, email, nickname, is_guest, created_at, last_seen_at, status"
 
 # last_seen_at is refreshed at most once per window per sub. Every JWT request
 # needs the user row, but only the first in a window needs to WRITE it: within
@@ -76,6 +76,27 @@ get_or_create_guest <- function(pool) {
             USER_COLUMNS
         )
     )
+}
+
+# Set users.status (the cross-app enforcement authority, shared with
+# shiny-base) and, when the user is no longer active, drop their API keys in the
+# SAME transaction: a committed ban must never leave a usable credential behind.
+# 'deleted' is terminal - neither an admin unban nor a late Auth0 user.updated
+# event may resurrect such a row - so every other transition is guarded in SQL.
+# Returns the number of rows actually updated (0 = the guard refused).
+set_user_status <- function(pool, user_id, status) {
+    pool::poolWithTransaction(pool, function(con) {
+        sql <- if (identical(status, "deleted")) {
+            "UPDATE users SET status = $1 WHERE id = $2"
+        } else {
+            "UPDATE users SET status = $1 WHERE id = $2 AND status <> 'deleted'"
+        }
+        updated <- DBI::dbExecute(con, sql, params = list(status, user_id))
+        if (updated > 0 && !identical(status, "active")) {
+            delete_all_user_keys(con, user_id)
+        }
+        updated
+    })
 }
 
 # Resolve the user row backing an authenticated principal (see current_principal).

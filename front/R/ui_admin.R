@@ -7,7 +7,17 @@
 
 ADMIN_RECENT_SEEN_SECONDS <- 15L * 60L
 
-admin_content <- function(tab, data, hours, seen, lang, translations, can_manage_roles = FALSE) {
+admin_content <- function(
+    tab,
+    data,
+    hours,
+    seen,
+    lang,
+    translations,
+    can_manage_roles = FALSE,
+    can_manage_users = FALSE,
+    viewer_id = NULL
+) {
     tab_link <- function(value, label) {
         htmltools::tags$li(
             class = "nav-item",
@@ -20,7 +30,7 @@ admin_content <- function(tab, data, hours, seen, lang, translations, can_manage
     }
     body <- switch(
         tab,
-        users = admin_users_panel(data$items, seen, lang, translations, can_manage_roles),
+        users = admin_users_panel(data$items, seen, lang, translations, can_manage_roles, can_manage_users, viewer_id),
         requests = htmltools::div(
             class = "card",
             htmltools::div(class = "card-body", admin_requests_table(data$items, hours, lang, translations))
@@ -48,7 +58,15 @@ access_denied_content <- function(lang, translations) {
 }
 
 # Users tab: an all/recently-active filter plus one card per user.
-admin_users_panel <- function(users, seen, lang, translations, can_manage_roles = FALSE) {
+admin_users_panel <- function(
+    users,
+    seen,
+    lang,
+    translations,
+    can_manage_roles = FALSE,
+    can_manage_users = FALSE,
+    viewer_id = NULL
+) {
     if (identical(seen, "recent")) {
         cutoff <- Sys.time() - ADMIN_RECENT_SEEN_SECONDS
         users <- Filter(function(u) isTRUE(parse_be_time(u$last_seen_at) >= cutoff), users)
@@ -77,7 +95,14 @@ admin_users_panel <- function(users, seen, lang, translations, can_manage_roles 
                 lapply(users, function(u) {
                     htmltools::div(
                         class = "col-md-6 col-xl-4",
-                        htmltools::HTML(admin_user_card_html(u, lang, translations, can_manage_roles))
+                        htmltools::HTML(admin_user_card_html(
+                            u,
+                            lang,
+                            translations,
+                            can_manage_roles,
+                            can_manage_users,
+                            viewer_id
+                        ))
                     )
                 })
             )
@@ -85,15 +110,28 @@ admin_users_panel <- function(users, seen, lang, translations, can_manage_roles 
     )
 }
 
-# One admin user card. Carries a stable id so a role change can refresh it
-# out-of-band. Role management targets Auth0 identities, so the control is
-# absent for guests (no auth0_sub) and for viewers without manage:admin:roles.
-admin_user_card_html <- function(user, lang, translations, can_manage_roles = FALSE, oob = FALSE) {
+# One admin user card. Carries a stable id so a role or status change can
+# refresh it out-of-band. Role and ban management target Auth0 identities, so
+# both controls are absent for guests (no auth0_sub) and for viewers without the
+# matching scope; the ban toggle is additionally absent on the viewer's own card
+# (the backend refuses a self-ban with a 409 anyway).
+admin_user_card_html <- function(
+    user,
+    lang,
+    translations,
+    can_manage_roles = FALSE,
+    can_manage_users = FALSE,
+    viewer_id = NULL,
+    oob = FALSE
+) {
     id <- as.integer(user$id)
     is_guest <- isTRUE(user$is_guest)
     email <- be_scalar(user$email)
     nickname <- be_scalar(user$nickname)
     role <- be_scalar(user$role)
+    status <- be_scalar(user$status) %||% "active"
+    is_banned <- identical(status, "banned")
+    is_self <- !is.null(viewer_id) && identical(as.integer(viewer_id), id)
     count_item <- function(icon, title, value) {
         htmltools::tags$span(
             class = "text-muted small me-3",
@@ -133,6 +171,35 @@ admin_user_card_html <- function(user, lang, translations, can_manage_roles = FA
                             `hx-swap` = "innerHTML",
                             bs_icon("person-gear")
                         )
+                    },
+                    if (can_manage_users && !is_guest && !is_self) {
+                        htmltools::tags$button(
+                            type = "button",
+                            class = paste(
+                                c("btn btn-sm", if (is_banned) "btn-outline-success" else "btn-outline-danger"),
+                                collapse = " "
+                            ),
+                            title = if (is_banned) {
+                                tr("Unban user", lang, translations)
+                            } else {
+                                tr("Ban user", lang, translations)
+                            },
+                            `hx-put` = sprintf("/admin/users/%d/status", id),
+                            `hx-vals` = sprintf('{"status": "%s"}', if (is_banned) "active" else "banned"),
+                            `hx-target` = sprintf("#admin-user-%d", id),
+                            `hx-swap` = "outerHTML",
+                            `hx-confirm` = if (is_banned) {
+                                tr("Are you sure you want to unban this user?", lang, translations)
+                            } else {
+                                tr("Are you sure you want to ban this user?", lang, translations)
+                            },
+                            `hx-disabled-elt` = "this",
+                            bs_icon(if (is_banned) "unlock" else "slash-circle"),
+                            htmltools::tags$span(
+                                class = "ms-1",
+                                if (is_banned) tr("Unban", lang, translations) else tr("Ban", lang, translations)
+                            )
+                        )
                     }
                 ),
                 htmltools::div(
@@ -147,6 +214,12 @@ admin_user_card_html <- function(user, lang, translations, can_manage_roles = FA
                     ),
                     if (is_guest) {
                         htmltools::tags$span(class = "badge text-bg-warning", tr("Guest", lang, translations))
+                    },
+                    if (!identical(status, "active")) {
+                        htmltools::tags$span(
+                            class = "badge text-bg-danger ms-1",
+                            tr(if (is_banned) "Banned" else "Deleted", lang, translations)
+                        )
                     }
                 ),
                 htmltools::div(

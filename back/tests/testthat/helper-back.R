@@ -8,6 +8,7 @@ suppressWarnings(suppressMessages(library(plumber2)))
 # Rejected-credential log lines are exercised deliberately all over the auth
 # tests; keep the output pristine.
 options(back.quiet_auth_log = TRUE)
+options(back.quiet_events_log = TRUE)
 
 # back/ holds _server.yml, constructor.R and R/. Resolve it whether tests run
 # from the repo root or from the test dir (testthat sets wd to the test dir).
@@ -37,7 +38,8 @@ service_files <- c(
     "jobs.R",
     "ratelimit.R",
     "request_log.R",
-    "maintenance.R"
+    "maintenance.R",
+    "events_sync.R"
 )
 for (f in service_files) {
     source(file.path(BACK_DIR, "R", f), local = FALSE)

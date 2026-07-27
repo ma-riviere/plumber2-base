@@ -28,6 +28,7 @@ function(datastore, response) {
                 email = jsonlite::unbox(row$email),
                 nickname = jsonlite::unbox(row$nickname),
                 is_guest = jsonlite::unbox(row$is_guest),
+                status = jsonlite::unbox(row$status),
                 created_at = jsonlite::unbox(format_time_or_null(row$created_at)),
                 last_seen_at = jsonlite::unbox(format_time_or_null(row$last_seen_at)),
                 n_datasets = jsonlite::unbox(as.integer(row$n_datasets)),
@@ -116,6 +117,68 @@ function(id, body, datastore, response) {
         user_id = jsonlite::unbox(as.integer(id)),
         role = jsonlite::unbox(new_role$name %||% NA_character_),
         role_id = jsonlite::unbox(if (nzchar(role_id)) role_id else NA_character_)
+    )
+}
+
+#* Ban or unban a user. users.status is the cross-app authority (shiny-base
+#* enforces the same column), so the local write comes FIRST and is
+#* authoritative; the Auth0 side (block + kill live sessions and refresh
+#* tokens, since blocking alone stops only NEW logins) is best-effort and never
+#* rolls the local state back - `auth0_synced` reports whether it went through.
+#* Banning deletes the user's API keys; unbanning restores login but NOT the
+#* keys (the user mints new ones). Status 'deleted' is reserved for the Auth0
+#* events poller and is not settable here.
+#* @param id:integer The user id
+#* @body status:string Either "banned" or "active"
+#* @put /v1/admin/users/<id:integer>/status
+#* @serializer json
+#* @noDoc
+function(id, body, datastore, response) {
+    scope <- require_scope(datastore, response, "manage:admin:users")
+    if (!isTRUE(scope)) {
+        return(scope)
+    }
+    principal <- request_principal(datastore, response)
+    target <- get_user_by_id(app_pool(), as.integer(id))
+    if (is.null(target)) {
+        reqres::abort_not_found("no such user")
+    }
+    status <- body$status
+    if (!is.character(status) || length(status) != 1L || is.na(status)) {
+        reqres::abort_http_problem(422L, detail = "status must be a single string")
+    }
+    status <- trimws(status)
+    if (!status %in% c("banned", "active")) {
+        reqres::abort_http_problem(422L, detail = "status must be 'banned' or 'active'")
+    }
+    if (isTRUE(target$is_guest) || is.na(target$auth0_sub)) {
+        reqres::abort_http_problem(422L, detail = "guest users have no Auth0 identity")
+    }
+    if (identical(principal$user$auth0_sub, target$auth0_sub)) {
+        reqres::abort_http_problem(409L, detail = "refusing to ban yourself")
+    }
+    if (set_user_status(app_pool(), as.integer(id), status) == 0L) {
+        reqres::abort_http_problem(409L, detail = "this account is deleted")
+    }
+    # mgmt_client() aborts 503 when unconfigured; here that is not fatal - the
+    # local ban already holds - so the Auth0 leg is best-effort. The block alone
+    # denies a blocked user every new token (login, silent SSO auth and refresh
+    # exchange all fail with "user is blocked"); the explicit session/refresh-
+    # token revocation endpoints are plan-gated (403 "Subscription missing
+    # entitlement" on free) and redundant here, so they are not called.
+    client <- tryCatch(mgmt_client(), error = function(e) NULL)
+    synced <- !is.null(client) &&
+        tryCatch(
+            {
+                client$set_user_blocked(target$auth0_sub, identical(status, "banned"))
+                TRUE
+            },
+            error = function(e) FALSE
+        )
+    list(
+        user_id = jsonlite::unbox(as.integer(id)),
+        status = jsonlite::unbox(status),
+        auth0_synced = jsonlite::unbox(synced)
     )
 }
 

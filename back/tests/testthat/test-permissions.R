@@ -5,7 +5,14 @@ test_that("the shipped permissions.yaml loads and is internally consistent", {
 
     expect_setequal(
         permissions$scopes,
-        c("write:datasets", "write:models", "manage:keys", "view:admin", "manage:admin:roles")
+        c(
+            "write:datasets",
+            "write:models",
+            "manage:keys",
+            "view:admin",
+            "manage:admin:roles",
+            "manage:admin:users"
+        )
     )
     expect_true(all(c("admin", "dev", "user") %in% names(permissions$roles)))
     expect_equal(permissions$default_role, "user")

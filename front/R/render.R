@@ -196,14 +196,23 @@ display_name <- function(user) {
 }
 
 # 403 login-failure page used by the /callback error paths.
-render_login_error <- function(request, response, state) {
+render_login_error <- function(request, response, state, blocked = FALSE) {
     response$status <- 403L
     lang <- resolve_lang(request, state$translations)
-    title <- tr("Login failed", lang, state$translations)
+    title_key <- if (blocked) "Account suspended" else "Login failed"
+    message_key <- if (blocked) {
+        "Your account has been suspended by an administrator. If you believe this is a mistake, please contact them."
+    } else {
+        "The sign-in attempt could not be completed. Please try again."
+    }
+    title <- tr(title_key, lang, state$translations)
     content <- render_tags(
         htmltools::h1(class = "mb-4", title),
-        htmltools::p(tr("The sign-in attempt could not be completed. Please try again.", lang, state$translations)),
-        htmltools::a(class = "btn btn-primary", href = "/login", tr("Try again", lang, state$translations))
+        htmltools::p(tr(message_key, lang, state$translations)),
+        # Retrying is pointless while the account is blocked upstream.
+        if (!blocked) {
+            htmltools::a(class = "btn btn-primary", href = "/login", tr("Try again", lang, state$translations))
+        }
     )
     render_page(request, response, content = content, title = title, lang = lang, state = state)
 }

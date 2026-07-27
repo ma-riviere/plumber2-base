@@ -55,7 +55,9 @@ create_api_key <- function(pool, user_id, name, scopes = character(), expires_at
 }
 
 # Resolve a presented secret to its active key record, or NULL. Lookup is by
-# prefix (indexed); every candidate's hash is compared in constant time.
+# prefix (indexed); every candidate's hash is compared in constant time. The
+# users join drops keys of a banned/deleted owner, so the guard itself fails
+# (401) instead of authenticating a principal request_principal would then 403.
 lookup_api_key <- function(pool, secret) {
     if (is.null(pool) || !is.character(secret) || length(secret) != 1 || !grepl(API_KEY_PATTERN, secret)) {
         return(NULL)
@@ -63,9 +65,11 @@ lookup_api_key <- function(pool, secret) {
     candidates <- tryCatch(
         DBI::dbGetQuery(
             pool,
-            "SELECT id, user_id, name, key_hash, scopes FROM api_keys
-             WHERE key_prefix = $1 AND revoked_at IS NULL
-               AND (expires_at IS NULL OR expires_at > now())",
+            "SELECT k.id, k.user_id, k.name, k.key_hash, k.scopes FROM api_keys k
+             JOIN users u ON u.id = k.user_id
+             WHERE k.key_prefix = $1 AND k.revoked_at IS NULL
+               AND (k.expires_at IS NULL OR k.expires_at > now())
+               AND u.status = 'active'",
             params = list(api_key_prefix(secret))
         ),
         error = function(e) NULL
@@ -113,6 +117,13 @@ touch_api_key <- function(pool, key_id, throttle_seconds = KEY_TOUCH_THROTTLE_SE
         silent = TRUE
     )
     invisible()
+}
+
+# Drop every key of a user (ban / account deletion). A HARD delete, not a
+# revoke: request_log.api_key_id is a bare bigint with no foreign key, so the
+# usage history survives. Returns the number of rows removed.
+delete_all_user_keys <- function(pool, user_id) {
+    DBI::dbExecute(pool, "DELETE FROM api_keys WHERE user_id = $1", params = list(user_id))
 }
 
 # Revoke a key. Scoped to the owning user; returns TRUE if a live key was revoked.

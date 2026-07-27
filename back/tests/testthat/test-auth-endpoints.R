@@ -55,7 +55,14 @@ test_that("/v1/me with a valid JWT provisions the user and maps roles to scopes"
     expect_false(body$user$is_guest)
     expect_setequal(
         body$scopes,
-        c("write:datasets", "write:models", "manage:keys", "view:admin", "manage:admin:roles")
+        c(
+            "write:datasets",
+            "write:models",
+            "manage:keys",
+            "view:admin",
+            "manage:admin:roles",
+            "manage:admin:users"
+        )
     )
 
     # The user row was created; a second call reuses it.

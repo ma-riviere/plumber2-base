@@ -61,7 +61,7 @@ db_prune_request_log <- function(pool, retention_days = 30L) {
 db_admin_users <- function(pool) {
     DBI::dbGetQuery(
         pool,
-        "SELECT u.id, u.auth0_sub, u.email, u.nickname, u.is_guest, u.created_at, u.last_seen_at,
+        "SELECT u.id, u.auth0_sub, u.email, u.nickname, u.is_guest, u.created_at, u.last_seen_at, u.status,
                 (SELECT count(*) FROM datasets d WHERE d.user_id = u.id) AS n_datasets,
                 (SELECT count(*) FROM models m WHERE m.user_id = u.id) AS n_models,
                 (SELECT count(*) FROM api_keys k WHERE k.user_id = u.id AND k.revoked_at IS NULL) AS n_api_keys

@@ -577,3 +577,100 @@
         </div>
       </div>
 
+---
+
+    Code
+      snap(admin_user_card_html(banned, "en", snap_translations, can_manage_users = TRUE))
+    Output
+      <div class="card admin-user-card h-100" id="admin-user-2">
+        <div class="card-body d-flex gap-3">
+          <i class="bi bi-person-fill admin-user-avatar" aria-hidden="true">
+      </i>
+          <div class="flex-grow-1 overflow-hidden">
+            <div class="d-flex justify-content-between align-items-start gap-2">
+              <div class="overflow-hidden">
+                <div class="fw-semibold text-truncate">dev@example.com</div>
+                <div class="text-muted small text-truncate">dev</div>
+              </div>
+              <button type="button" class="btn btn-sm btn-outline-success" title="Unban user" hx-put="/admin/users/2/status" hx-vals="{&quot;status&quot;: &quot;active&quot;}" hx-target="#admin-user-2" hx-swap="outerHTML" hx-confirm="Are you sure you want to unban this user?" hx-disabled-elt="this">
+                <i class="bi bi-unlock" aria-hidden="true">
+      </i>
+                <span class="ms-1">Unban</span>
+              </button>
+            </div>
+            <div class="mt-1">
+              <span class="badge me-1 text-bg-secondary">dev</span>
+              <span class="badge text-bg-danger ms-1">Banned</span>
+            </div>
+            <div class="mt-2">
+              <span class="text-muted small me-3" title="Datasets">
+                <i class="bi bi-folder2-open me-1" aria-hidden="true">
+      </i>
+                3
+              </span>
+              <span class="text-muted small me-3" title="Models">
+                <i class="bi bi-graph-up me-1" aria-hidden="true">
+      </i>
+                1
+              </span>
+              <span class="text-muted small me-3" title="API Keys">
+                <i class="bi bi-key me-1" aria-hidden="true">
+      </i>
+                0
+              </span>
+            </div>
+            <div class="text-muted small mt-1">
+              <i class="bi bi-clock me-1" aria-hidden="true">
+      </i>
+              Last seen 2026-07-05
+            </div>
+          </div>
+        </div>
+      </div>
+
+---
+
+    Code
+      snap(admin_user_card_html(user, "en", snap_translations, can_manage_users = TRUE,
+        viewer_id = 2L))
+    Output
+      <div class="card admin-user-card h-100" id="admin-user-2">
+        <div class="card-body d-flex gap-3">
+          <i class="bi bi-person-fill admin-user-avatar" aria-hidden="true">
+      </i>
+          <div class="flex-grow-1 overflow-hidden">
+            <div class="d-flex justify-content-between align-items-start gap-2">
+              <div class="overflow-hidden">
+                <div class="fw-semibold text-truncate">dev@example.com</div>
+                <div class="text-muted small text-truncate">dev</div>
+              </div>
+            </div>
+            <div class="mt-1">
+              <span class="badge me-1 text-bg-secondary">dev</span>
+            </div>
+            <div class="mt-2">
+              <span class="text-muted small me-3" title="Datasets">
+                <i class="bi bi-folder2-open me-1" aria-hidden="true">
+      </i>
+                3
+              </span>
+              <span class="text-muted small me-3" title="Models">
+                <i class="bi bi-graph-up me-1" aria-hidden="true">
+      </i>
+                1
+              </span>
+              <span class="text-muted small me-3" title="API Keys">
+                <i class="bi bi-key me-1" aria-hidden="true">
+      </i>
+                0
+              </span>
+            </div>
+            <div class="text-muted small mt-1">
+              <i class="bi bi-clock me-1" aria-hidden="true">
+      </i>
+              Last seen 2026-07-05
+            </div>
+          </div>
+        </div>
+      </div>
+

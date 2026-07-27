@@ -537,6 +537,58 @@
             "fr": "Rôle mis à jour"
         },
         {
+            "en": "Ban user",
+            "fr": "Bannir l'utilisateur"
+        },
+        {
+            "en": "Ban",
+            "fr": "Bannir"
+        },
+        {
+            "en": "Unban",
+            "fr": "Débannir"
+        },
+        {
+            "en": "Account suspended",
+            "fr": "Compte suspendu"
+        },
+        {
+            "en": "Your account has been suspended by an administrator. If you believe this is a mistake, please contact them.",
+            "fr": "Votre compte a été suspendu par un administrateur. Si vous pensez qu'il s'agit d'une erreur, veuillez le contacter."
+        },
+        {
+            "en": "Unban user",
+            "fr": "Réintégrer l'utilisateur"
+        },
+        {
+            "en": "Are you sure you want to ban this user?",
+            "fr": "Voulez-vous vraiment bannir cet utilisateur ?"
+        },
+        {
+            "en": "Are you sure you want to unban this user?",
+            "fr": "Voulez-vous vraiment réintégrer cet utilisateur ?"
+        },
+        {
+            "en": "Banned",
+            "fr": "Banni"
+        },
+        {
+            "en": "Deleted",
+            "fr": "Supprimé"
+        },
+        {
+            "en": "User banned",
+            "fr": "Utilisateur banni"
+        },
+        {
+            "en": "User unbanned",
+            "fr": "Utilisateur réintégré"
+        },
+        {
+            "en": "Saved locally, but the Auth0 sync failed",
+            "fr": "Enregistré localement, mais la synchronisation Auth0 a échoué"
+        },
+        {
             "en": "Access denied",
             "fr": "Accès refusé"
         },

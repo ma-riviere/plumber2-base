@@ -145,4 +145,8 @@ test_that("admin user card and role modal", {
     )
     expect_snapshot(snap(admin_user_card_html(user, "en", snap_translations, can_manage_roles = TRUE)))
     expect_snapshot(snap(render_tags(admin_role_modal_html(user, roles, "user", "en", snap_translations))))
+    # Ban toggle + banned badge; viewer_id matching the card hides the toggle.
+    banned <- utils::modifyList(user, list(status = "banned"))
+    expect_snapshot(snap(admin_user_card_html(banned, "en", snap_translations, can_manage_users = TRUE)))
+    expect_snapshot(snap(admin_user_card_html(user, "en", snap_translations, can_manage_users = TRUE, viewer_id = 2L)))
 })

@@ -66,7 +66,9 @@ function(request, response, server, datastore, query) {
                 explore,
                 lang,
                 state$translations,
-                can_write = "write:datasets" %in% scopes
+                can_write = "write:datasets" %in% scopes,
+                chat = chat_visible(state, datastore),
+                chat_session = chat_get(chat_session_key(datastore))
             ),
             title = tr("Explore", lang, state$translations),
             lang = lang,
@@ -142,7 +144,9 @@ function(request, response, server, datastore, query) {
                 seen,
                 lang,
                 state$translations,
-                can_manage_roles = "manage:admin:roles" %in% scopes
+                can_manage_roles = "manage:admin:roles" %in% scopes,
+                can_manage_users = "manage:admin:users" %in% scopes,
+                viewer_id = datastore$session$auth$user_id
             )
         }
         render_page(
