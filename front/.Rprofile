@@ -6,7 +6,7 @@ source("renv/activate.R")
 # binary from the generic dated URL via the User-Agent below (Rscript's
 # default UA otherwise gets source packages).
 local({
-    ppm <- "https://packagemanager.posit.co/cran/2026-07-09"
+    ppm <- "https://packagemanager.posit.co/cran/2026-07-24"
     options(
         repos = c(PPM = ppm),
         HTTPUserAgent = sprintf(

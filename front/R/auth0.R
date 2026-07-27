@@ -79,10 +79,6 @@ oidc_redirect_uri <- function(config) {
     paste0(config$app_url, "/callback")
 }
 
-refresh_access <- function(config, refresh_token) {
-    app_auth0_client(config)$refresh_tokens(refresh_token)
-}
-
 # Best-effort at logout; the server-side session is destroyed regardless.
 revoke_refresh_token <- function(config, refresh_token) {
     app_auth0_client(config)$revoke_refresh_token(refresh_token)

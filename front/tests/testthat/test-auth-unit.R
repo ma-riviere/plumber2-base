@@ -92,7 +92,10 @@ test_that("the authorize URL carries the full OIDC + PKCE parameter set", {
     expect_equal(query$audience, "https://base-api.test")
     expect_equal(query$state, login_start$txn$state)
     expect_equal(query$nonce, login_start$txn$nonce)
-    expect_equal(query$code_challenge, auth0r::pkce_challenge(login_start$txn$verifier))
+    expect_equal(
+        query$code_challenge,
+        jose::base64url_encode(openssl::sha256(charToRaw(login_start$txn$verifier)))
+    )
     expect_equal(query$code_challenge_method, "S256")
 })
 

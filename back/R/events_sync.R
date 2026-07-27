@@ -152,38 +152,16 @@ parse_events_data <- function(data) {
 
 # --- stream access -------------------------------------------------------------
 
-# Client-credentials token for the Events stream. auth0r's Auth0Management is
-# not usable here: its request() escape hatch parses the body as JSON and blocks
-# until the server closes the stream, and it exposes no token accessor, so the
-# token is minted (and cached to expiry) locally instead.
-events_access_token <- function(config) {
-    now <- as.numeric(Sys.time())
-    if (!is.null(events_state$token) && now < (events_state$token_expires_at %||% 0)) {
-        return(events_state$token)
-    }
-    body <- list(
-        grant_type = "client_credentials",
-        client_id = config$auth0$mgmt_client_id,
-        client_secret = config$auth0$mgmt_client_secret,
-        audience = sprintf("https://%s/api/v2/", config$auth0$domain)
-    )
-    parsed <- httr2::request(sprintf("https://%s/oauth/token", config$auth0$domain)) |>
-        httr2::req_body_json(body) |>
-        httr2::req_timeout(10) |>
-        httr2::req_options(connecttimeout = 5) |>
-        httr2::req_perform() |>
-        httr2::resp_body_json()
-    events_state$token <- parsed$access_token
-    events_state$token_expires_at <- now + max((parsed$expires_in %||% 600) - 60, 60)
-    events_state$token
-}
-
 # `from` (opaque cursor) and `from_timestamp` are mutually exclusive upstream.
-# The explicit timeouts matter: opening the stream is the one blocking step of
-# the tick, so a hung Auth0 endpoint must not pin the single-threaded loop.
+# The bearer token is the shared Management client's (auth0r caches it to
+# expiry). The explicit timeouts matter: opening the stream is the one blocking
+# step of the tick, so a hung Auth0 endpoint must not pin the single-threaded
+# loop.
 events_open_stream <- function(config, cursor, from_timestamp) {
-    req <- httr2::request(sprintf("https://%s/api/v2/events", config$auth0$domain)) |>
-        httr2::req_auth_bearer_token(events_access_token(config)) |>
+    mgmt <- mgmt_client(config)
+    req <- httr2::request(mgmt$api_url) |>
+        httr2::req_url_path_append("events") |>
+        httr2::req_auth_bearer_token(mgmt$access_token()) |>
         httr2::req_headers(Accept = "text/event-stream") |>
         httr2::req_url_query(event_type = EVENTS_TYPES, .multi = "explode") |>
         httr2::req_timeout(EVENTS_DRAIN_SECONDS + 10) |>
@@ -259,7 +237,7 @@ run_events_sync <- function(config, on_done = function() invisible()) {
         events_open_stream(config, start$cursor, start$from_timestamp),
         error = function(e) {
             # HTTP 410 = the cursor aged out of Auth0's retention window.
-            if (!is.null(start$cursor) && grepl("410", conditionMessage(e), fixed = TRUE)) {
+            if (!is.null(start$cursor) && inherits(e, "httr2_http_410")) {
                 try(reset_events_position(pool), silent = TRUE)
             } else {
                 log_events_sync("cannot open stream: %s", conditionMessage(e))
