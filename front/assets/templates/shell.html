@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="{{asset_app_css}}">
 </head>
 <body data-server-error="{{msg_server_error}}">
+    {{#show_nav}}
     <nav class="navbar navbar-expand-md">
         <div class="container-fluid">
             <a class="navbar-brand" href="/">{{brand}}</a>
@@ -29,6 +30,7 @@
             </div>
         </div>
     </nav>
+    {{/show_nav}}
 
     <main class="container-fluid py-4">
         {{{content}}}

@@ -140,11 +140,17 @@ function(request, response, server, datastore) {
 function(request, response, server) {
     state <- server$get_data("state")
     lang <- resolve_lang(request, state$translations)
-    title <- tr("Email verification required", lang, state$translations)
-    content <- render_tags(
-        htmltools::h1(class = "mb-4", title),
-        htmltools::p(tr("Please verify your email address, then sign in again.", lang, state$translations)),
-        htmltools::a(class = "btn btn-primary", href = "/login", tr("Try again", lang, state$translations))
+    render_terminal_page(
+        request,
+        response,
+        state,
+        lang,
+        title = tr("Email verification required", lang, state$translations),
+        message = tr("Please verify your email address, then sign in again.", lang, state$translations),
+        footer = htmltools::p(htmltools::a(
+            class = "btn btn-primary",
+            href = "/login",
+            tr("Try again", lang, state$translations)
+        ))
     )
-    render_page(request, response, content = content, title = title, lang = lang, state = state)
 }

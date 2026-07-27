@@ -8,7 +8,18 @@
 # shell and htmltools content are therefore collapsed to a single unclassed
 # string before returning.
 
-render_page <- function(request, response, content, title, lang, state, oob = NULL, user = NULL, scopes = character()) {
+render_page <- function(
+    request,
+    response,
+    content,
+    title,
+    lang,
+    state,
+    oob = NULL,
+    user = NULL,
+    scopes = character(),
+    show_nav = TRUE
+) {
     set_html_headers(response)
     body <- paste0(content, oob %||% "", collapse = "")
     if (is_htmx_request(request)) {
@@ -22,7 +33,8 @@ render_page <- function(request, response, content, title, lang, state, oob = NU
         csrf_token = response$get_data("csrf_token") %||% "",
         user = user,
         scopes = scopes,
-        active_path = request$path
+        active_path = request$path,
+        show_nav = show_nav
     )
 }
 
@@ -104,7 +116,8 @@ render_shell <- function(
     csrf_token = "",
     user = NULL,
     scopes = character(),
-    active_path = ""
+    active_path = "",
+    show_nav = TRUE
 ) {
     manifest <- state$manifest
     translations <- state$translations
@@ -112,6 +125,7 @@ render_shell <- function(
         lang = lang,
         title = title,
         csrf_token = csrf_token,
+        show_nav = show_nav,
         msg_server_error = tr("Server error, please try again", lang, translations),
         asset_bootstrap_css = static_url(manifest, "vendor/bootstrap.min.css"),
         asset_icons_css = static_url(manifest, "vendor/bootstrap-icons.min.css"),
@@ -195,9 +209,42 @@ display_name <- function(user) {
     "user"
 }
 
+# Navbar-less terminal page (login failures, email gate): a centered card on
+# the bare shell, for states where no usable session exists so app navigation
+# is dead weight. Mirrors auth0r's terminal_login_error page in shiny-base.
+render_terminal_page <- function(request, response, state, lang, title, message, footer = NULL) {
+    content <- render_tags(
+        htmltools::div(
+            class = "row justify-content-center mt-5",
+            htmltools::div(
+                class = "col-11 col-sm-8 col-md-6 col-xl-4",
+                htmltools::div(
+                    class = "card text-center shadow-sm",
+                    htmltools::div(
+                        class = "card-body p-4",
+                        htmltools::h1(class = "h4 card-title mb-3", title),
+                        htmltools::p(message),
+                        footer
+                    )
+                )
+            )
+        )
+    )
+    render_page(
+        request,
+        response,
+        content = content,
+        title = title,
+        lang = lang,
+        state = state,
+        show_nav = FALSE
+    )
+}
+
 # 403 login-failure page used by the /callback error paths.
 render_login_error <- function(request, response, state, blocked = FALSE) {
     response$status <- 403L
+    config <- state$config
     lang <- resolve_lang(request, state$translations)
     title_key <- if (blocked) "Account suspended" else "Login failed"
     message_key <- if (blocked) {
@@ -205,16 +252,34 @@ render_login_error <- function(request, response, state, blocked = FALSE) {
     } else {
         "The sign-in attempt could not be completed. Please try again."
     }
-    title <- tr(title_key, lang, state$translations)
-    content <- render_tags(
-        htmltools::h1(class = "mb-4", title),
-        htmltools::p(tr(message_key, lang, state$translations)),
-        # Retrying is pointless while the account is blocked upstream.
-        if (!blocked) {
-            htmltools::a(class = "btn btn-primary", href = "/login", tr("Try again", lang, state$translations))
-        }
+    # No local session exists on a failed login, but Auth0's SSO cookie may:
+    # without an explicit Auth0 logout the next /login silently replays the
+    # same (e.g. blocked) account. Legacy /v2/logout because there is no ID
+    # token to hint /oidc/logout with (auth0r terminal-page parity).
+    logout_href <- if (!config$bypass_auth && nzchar(config$auth0$domain)) {
+        app_auth0_client(config)$logout_url(return_to = config$app_url, legacy = TRUE)
+    }
+    render_terminal_page(
+        request,
+        response,
+        state,
+        lang,
+        title = tr(title_key, lang, state$translations),
+        message = tr(message_key, lang, state$translations),
+        footer = list(
+            # Retrying is pointless while the account is blocked upstream.
+            if (!blocked) {
+                htmltools::p(htmltools::a(
+                    class = "btn btn-primary",
+                    href = "/login",
+                    tr("Try again", lang, state$translations)
+                ))
+            },
+            if (!is.null(logout_href)) {
+                htmltools::a(href = logout_href, tr("Log out of Auth0", lang, state$translations))
+            }
+        )
     )
-    render_page(request, response, content = content, title = title, lang = lang, state = state)
 }
 
 static_url <- function(manifest, logical) {

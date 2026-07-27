@@ -557,6 +557,10 @@
             "fr": "Votre compte a été suspendu par un administrateur. Si vous pensez qu'il s'agit d'une erreur, veuillez le contacter."
         },
         {
+            "en": "Log out of Auth0",
+            "fr": "Se déconnecter d'Auth0"
+        },
+        {
             "en": "Unban user",
             "fr": "Réintégrer l'utilisateur"
         },
