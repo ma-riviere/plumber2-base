@@ -90,6 +90,9 @@ services:
       BACKEND_URL: http://back:8081
       APP_URL: https://plumber2-base.ma-riviere.com
       BACKEND_PUBLIC_URL: https://plumber2-base-api.ma-riviere.com
+      # The widget still auto-hides unless harness.env provides a model source
+      # (LLAMA_BASE_URL or CHAT_FALLBACK_PROVIDER/MODEL).
+      CHAT_ENABLED: "true"
     # Backstop for the chat subprocesses: the app caps concurrent sessions and
     # per-turn walltime itself, but a runaway Node process must not be able to
     # take the whole (shared, single-VPS) host down. pids_limit also bounds a
