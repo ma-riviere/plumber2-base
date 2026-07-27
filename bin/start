@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+# Run the full local stack: dev Postgres (compose.dev.yml) + back (:8081) + front (:8080).
+#
+# Auth0 credentials come from app.env (real login flow). Pass --guest to skip
+# them and run in BYPASS_AUTH guest mode instead. Ctrl-C stops both services.
+#
+# Usage: start [--guest] [--no-db]
+set -euo pipefail
+# Job control: each service gets its own process group, so the trap can kill a
+# whole `Rscript | prefix` pipeline instead of orphaning the R process.
+set -m
+
+ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+GUEST=false
+START_DB=true
+
+for arg in "$@"; do
+    case "$arg" in
+        --guest) GUEST=true ;;
+        --no-db) START_DB=false ;;
+        *) echo "unknown option: $arg (usage: start [--guest] [--no-db])" >&2; exit 2 ;;
+    esac
+done
+
+export ENVIRONMENT=dev
+export LOG_LEVEL=debug
+
+if [[ $GUEST == true ]]; then
+    export BYPASS_AUTH=true
+    # Fixed key so guest sessions survive a restart.
+    export SESSION_KEY=${SESSION_KEY:-$(printf '0%.0s' {1..64})}
+else
+    if [[ ! -f "$ROOT/app.env" ]]; then
+        echo "app.env not found: fill it (deploy/auth0/provision.R) or run 'start --guest'" >&2
+        exit 1
+    fi
+    set -a
+    # shellcheck disable=SC1091
+    source "$ROOT/app.env"
+    set +a
+fi
+
+if [[ $START_DB == true ]]; then
+    docker compose -f "$ROOT/compose.dev.yml" up -d --wait >/dev/null
+fi
+
+pids=()
+cleanup() {
+    trap - INT TERM EXIT
+    for pid in "${pids[@]}"; do
+        kill -- "-$pid" 2>/dev/null || true
+    done
+    wait 2>/dev/null || true
+}
+trap cleanup INT TERM EXIT
+
+# Services must run from their own directory: renv's .Rprofile and .Renviron are
+# read from the working directory at R startup.
+run_service() {
+    local name=$1 port=$2
+    (
+        cd "$ROOT/$name"
+        # Ports are pinned here, not inherited: app.env is shared by both services.
+        PORT=$port Rscript entrypoint.R 2>&1 |
+            while IFS= read -r line; do printf '[%s] %s\n' "$name" "$line"; done
+    ) &
+    pids+=("$!")
+}
+
+run_service back 8081
+for _ in {1..40}; do
+    curl -fsS -o /dev/null http://127.0.0.1:8081/health && break
+    sleep 0.5
+done
+run_service front 8080
+
+echo "front http://localhost:8080 | back http://localhost:8081 (Ctrl-C to stop)"
+# Exit as soon as either service dies, so a crashed back does not leave a
+# half-running stack.
+wait -n

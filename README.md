@@ -27,7 +27,7 @@ Production-shaped images plus a throwaway Postgres, in guest mode (no Auth0 setu
 
 1. Start the dev database: `docker compose -f compose.dev.yml up -d --wait`, then apply roles/schemas once: `docker compose -f compose.dev.yml exec -T postgres psql -U admin -d apps -f - < db/dev-init.sql` (details in `db/README.md`).
 2. Migrations: `Rscript db/migrate.R`. Dev seed: `Rscript db/seed-dev.R`.
-3. Run the services: `Rscript back/entrypoint.R` (:8081) and `Rscript front/entrypoint.R` (:8080); `BYPASS_AUTH=true` enables guest mode without Auth0 credentials.
+3. Run the services: `Rscript back/entrypoint.R` (:8081) and `Rscript front/entrypoint.R` (:8080); `BYPASS_AUTH=true` enables guest mode without Auth0 credentials. `bin/start` (on PATH via direnv) does all of this in one command: database, both services, `--guest` for guest mode.
 4. Tests: `Rscript -e 'testthat::test_dir("db/tests")'`, same for `back/tests/testthat` and `front/tests/testthat`.
 
 renv caveat: each service's lockfile is an explicit snapshot of its `DESCRIPTION` Imports, so test-only Suggests are not recorded; after a fresh `renv::restore()`, run `renv::install()` in the service directory before running tests.
