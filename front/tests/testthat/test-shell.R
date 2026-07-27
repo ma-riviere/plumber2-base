@@ -13,6 +13,7 @@ render_shell <- function() {
         asset_bootstrap_js = "vendor/bootstrap.bundle.eeeeeeee.js",
         asset_app_js = "js/app.ffffffff.js",
         brand = "Base Front",
+        show_nav = TRUE,
         nav_links = '<li class="nav-item"><a class="nav-link" href="/">Home</a></li>',
         user_menu = '<li class="nav-item">User</li>',
         content = "<p>Hello world</p>"
