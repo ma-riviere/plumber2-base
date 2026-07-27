@@ -66,9 +66,7 @@ function(request, response, server, datastore, query) {
                 explore,
                 lang,
                 state$translations,
-                can_write = "write:datasets" %in% scopes,
-                chat = chat_visible(state, datastore),
-                chat_session = chat_get(chat_session_key(datastore))
+                can_write = "write:datasets" %in% scopes
             ),
             title = tr("Explore", lang, state$translations),
             lang = lang,
