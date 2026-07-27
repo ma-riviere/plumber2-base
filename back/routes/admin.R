@@ -19,14 +19,34 @@ function(datastore, response) {
         roles <- tryCatch(user_roles_cached(row$auth0_sub), error = function(e) character())
         if (length(roles) == 0) NA_character_ else roles[[1]]
     }
+    # Both apps sharing the users table fill email/nickname at login, so this
+    # only fires for the rows they never touched (BE-only principals): one
+    # cached Management call keeps the FE card from degrading to "#<id>",
+    # instead of the whole listing paying for the lookup.
+    profile_for <- function(row) {
+        stored <- list(email = row$email, nickname = row$nickname)
+        complete <- !is.na(stored$email) && !is.na(stored$nickname)
+        if (complete || isTRUE(row$is_guest) || is.na(row$auth0_sub) || !mgmt_available()) {
+            return(stored)
+        }
+        fetched <- tryCatch(user_profile_cached(row$auth0_sub), error = function(e) NULL)
+        if (is.null(fetched)) {
+            return(stored)
+        }
+        list(
+            email = if (is.na(stored$email)) fetched$email else stored$email,
+            nickname = if (is.na(stored$nickname)) fetched$nickname else stored$nickname
+        )
+    }
     list(
         items = lapply(seq_len(nrow(rows)), function(i) {
             row <- rows[i, ]
+            profile <- profile_for(row)
             list(
                 id = jsonlite::unbox(as.integer(row$id)),
                 auth0_sub = jsonlite::unbox(row$auth0_sub),
-                email = jsonlite::unbox(row$email),
-                nickname = jsonlite::unbox(row$nickname),
+                email = jsonlite::unbox(profile$email),
+                nickname = jsonlite::unbox(profile$nickname),
                 is_guest = jsonlite::unbox(row$is_guest),
                 status = jsonlite::unbox(row$status),
                 created_at = jsonlite::unbox(format_time_or_null(row$created_at)),

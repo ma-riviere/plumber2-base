@@ -1,11 +1,12 @@
 # Auth0 Management API access for the admin role endpoints. auth0r's
 # Auth0Management handles client-credentials token acquisition and expiry
 # refresh internally, so one client is constructed lazily (first use) and kept
-# for the process lifetime. User-role lookups are cached briefly (mirrors
-# shiny-base's admin cache) so rendering the admin user list does not issue one
-# Management API call per user per request; role changes invalidate the entry.
+# for the process lifetime. User-role and profile lookups are cached briefly
+# (mirrors shiny-base's admin cache) so rendering the admin user list does not
+# issue one Management API call per user per request; role changes invalidate
+# the entry.
 
-ROLES_CACHE_SECONDS <- 300L
+MGMT_CACHE_SECONDS <- 300L
 
 mgmt_state <- new.env(parent = emptyenv())
 
@@ -46,19 +47,46 @@ reset_mgmt_state <- function() {
     invisible()
 }
 
-# Role names for one auth0 sub, cached for ROLES_CACHE_SECONDS.
+# Role names for one auth0 sub, cached for MGMT_CACHE_SECONDS.
 user_roles_cached <- function(auth0_sub, config = app_config()) {
     if (is.null(mgmt_state$roles)) {
         mgmt_state$roles <- new.env(parent = emptyenv())
     }
     now <- as.numeric(Sys.time())
     hit <- mgmt_state$roles[[auth0_sub]]
-    if (!is.null(hit) && (now - hit$fetched_at) < ROLES_CACHE_SECONDS) {
+    if (!is.null(hit) && (now - hit$fetched_at) < MGMT_CACHE_SECONDS) {
         return(hit$roles)
     }
     roles <- mgmt_client(config)$get_user_roles(auth0_sub)
     mgmt_state$roles[[auth0_sub]] <- list(roles = roles, fetched_at = now)
     roles
+}
+
+# Email/nickname for one auth0 sub, cached for MGMT_CACHE_SECONDS. Only the
+# admin listing uses this, and only for rows whose profile columns are empty:
+# the apps fill them at login, but a principal provisioned BE-side only (an API
+# client that never used a front end) carries nothing but its sub.
+user_profile_cached <- function(auth0_sub, config = app_config()) {
+    if (is.null(mgmt_state$profiles)) {
+        mgmt_state$profiles <- new.env(parent = emptyenv())
+    }
+    now <- as.numeric(Sys.time())
+    hit <- mgmt_state$profiles[[auth0_sub]]
+    if (!is.null(hit) && (now - hit$fetched_at) < MGMT_CACHE_SECONDS) {
+        return(hit$profile)
+    }
+    user <- mgmt_client(config)$get_user(auth0_sub, fields = "email,nickname")
+    profile <- list(
+        email = as_na_scalar(user$email),
+        nickname = as_na_scalar(user$nickname)
+    )
+    mgmt_state$profiles[[auth0_sub]] <- list(profile = profile, fetched_at = now)
+    profile
+}
+
+# Management API fields come back as NULL when unset and can be empty strings.
+as_na_scalar <- function(value) {
+    if (!is.character(value) || length(value) != 1L || !nzchar(value)) NA_character_ else value
 }
 
 invalidate_user_roles <- function(auth0_sub) {

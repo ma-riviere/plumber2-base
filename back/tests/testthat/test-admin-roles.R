@@ -2,7 +2,7 @@
 # client (back/R/mgmt.R test seam): listing gates on view:admin, changes on
 # manage:admin:roles (admin-only), guests and self-demotion are refused.
 
-fake_mgmt_client <- function(user_roles = list()) {
+fake_mgmt_client <- function(user_roles = list(), users = list()) {
     calls <- new.env(parent = emptyenv())
     roles <- list(
         list(id = "rol_admin", name = "admin", description = "Administrator"),
@@ -18,6 +18,10 @@ fake_mgmt_client <- function(user_roles = list()) {
                 stop("no such role")
             }
             hit[[1]]
+        },
+        get_user = function(user_id, fields = NULL) {
+            calls$fetched <- c(calls$fetched, user_id)
+            users[[user_id]] %||% stop("no such user")
         },
         get_user_roles = function(sub, full = FALSE) {
             current <- user_roles[[sub]] %||% list()
@@ -109,6 +113,44 @@ test_that("the admin user listing carries each user's Auth0 role", {
     )
     expect_equal(users$items[[1]]$auth0_sub, "auth0|root")
     expect_equal(users$items[[1]]$role, "admin")
+})
+
+test_that("the admin user listing falls back to Auth0 for rows with no stored profile", {
+    ctx <- auth_api()
+    withr::defer(reset_mgmt_state())
+    reset_mgmt_state()
+    # The BE-side upsert only writes auth0_sub, so this row has no email or
+    # nickname stored.
+    client <- fake_mgmt_client(
+        user_roles = list("auth0|root" = list(list(id = "rol_admin", name = "admin"))),
+        users = list("auth0|root" = list(email = "root@example.com", nickname = "rooty"))
+    )
+    set_mgmt_client(client)
+    admin <- bearer_header(sign_access_token(ctx$fixture, roles = "admin", sub = "auth0|root"))
+    do_request(ctx$pa, "http://t/v1/me", headers = admin)
+
+    listing <- function() {
+        yyjsonr::read_json_str(
+            do_request(ctx$pa, "http://t/v1/admin/users", headers = admin)$body,
+            arr_of_objs_to_df = FALSE,
+            obj_of_arrs_to_df = FALSE
+        )
+    }
+    users <- listing()
+    expect_equal(users$items[[1]]$email, "root@example.com")
+    expect_equal(users$items[[1]]$nickname, "rooty")
+
+    # Second render reuses the cached profile instead of re-querying Auth0.
+    listing()
+    expect_equal(client$calls$fetched, "auth0|root")
+
+    # A stored profile wins and never triggers a lookup.
+    DBI::dbExecute(ctx$pool, "UPDATE users SET email = 'stored@example.com' WHERE auth0_sub = 'auth0|root'")
+    reset_mgmt_state()
+    set_mgmt_client(client)
+    client$calls$fetched <- NULL
+    expect_equal(listing()$items[[1]]$email, "stored@example.com")
+    expect_equal(client$calls$fetched, "auth0|root") # nickname is still missing
 })
 
 test_that("PUT role replaces the target's roles; guests, bad ids and self-demotion are refused", {
