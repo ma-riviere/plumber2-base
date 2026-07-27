@@ -31,7 +31,7 @@ gather_explore <- function(state, datastore, dataset_id) {
     list(datasets = datasets, selected_id = selected_id, detail = detail, preview = preview)
 }
 
-explore_content <- function(explore, lang, translations, can_write = TRUE) {
+explore_content <- function(explore, lang, translations, can_write = TRUE, chat = NULL, chat_session = NULL) {
     detail <- explore$detail
     description <- be_scalar(detail$description)
     lead <- if (is.null(detail)) {
@@ -83,7 +83,13 @@ explore_content <- function(explore, lang, translations, can_write = TRUE) {
                 page_header(tr("Explore", lang, translations), lead),
                 main
             )
-        )
+        ),
+        # The chat widget needs a dataset to talk about, so it mounts only with
+        # a selection; it lives inside #page-body so a dataset switch remounts
+        # it (the old subprocess dies through the idle sweep, never from a GET).
+        if (isTRUE(chat) && !is.null(detail)) {
+            chat_widget_html(chat_session, explore$selected_id, lang, translations)
+        }
     ))
 }
 

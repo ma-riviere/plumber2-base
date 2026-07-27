@@ -29,3 +29,20 @@ AUTH0_MGMT_CLIENT_SECRET=
 
 # Session/crypto: sodium key (also derives refresh-token encryption and CSRF HMAC keys)
 SESSION_KEY=
+
+# Dataset chatbot (front only). Off unless CHAT_ENABLED=true AND a model source
+# is configured; needs `pi` (@earendil-works/pi-coding-agent) and the `duckdb`
+# CLI (1.5.5, the version the image pins) on PATH locally.
+# CHAT_ALLOW_GUESTS is honored only while BYPASS_AUTH=true.
+CHAT_ENABLED=false
+CHAT_ALLOW_GUESTS=true
+# Private llama.cpp router, preferred when one of the aliases is already loaded
+LLAMA_BASE_URL=
+LLAMA_API_KEY=
+CHAT_LLAMA_MODELS=
+# Remote fallback (provider id + model id as pi names them)
+CHAT_FALLBACK_PROVIDER=
+CHAT_FALLBACK_MODEL=
+OPENROUTER_API_KEY=
+# Web search tool (omitted -> the tool is not registered at all)
+TAVILY_API_KEY=

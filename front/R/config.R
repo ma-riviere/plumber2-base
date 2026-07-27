@@ -38,11 +38,42 @@ get_config <- function() {
             mgmt_client_id = env_get("AUTH0_MGMT_CLIENT_ID", ""),
             mgmt_client_secret = env_get("AUTH0_MGMT_CLIENT_SECRET", "")
         ),
-        session_key = env_get("SESSION_KEY", "")
+        session_key = env_get("SESSION_KEY", ""),
+        chat = chat_config(bypass_auth)
     )
 
     validate_config(config)
     config
+}
+
+# Dataset-chatbot knobs. The provider keys and the router URL arrive from the
+# platform harness env file (deploy/compose.yml), so the feature auto-hides
+# when the deployment has none: `enabled` stays FALSE unless a model source is
+# actually reachable. CHAT_ALLOW_GUESTS is honored only under BYPASS_AUTH,
+# where every session is a guest and the app would otherwise be untestable.
+chat_config <- function(bypass_auth) {
+    llama_base_url <- sub("/+$", "", env_get("LLAMA_BASE_URL", ""))
+    fallback_provider <- env_get("CHAT_FALLBACK_PROVIDER", "")
+    fallback_model <- env_get("CHAT_FALLBACK_MODEL", "")
+    has_model_source <- nzchar(llama_base_url) || (nzchar(fallback_provider) && nzchar(fallback_model))
+    list(
+        enabled = env_flag("CHAT_ENABLED", FALSE) && has_model_source,
+        allow_guests = bypass_auth && env_flag("CHAT_ALLOW_GUESTS", FALSE),
+        llama_base_url = llama_base_url,
+        llama_api_key = env_get("LLAMA_API_KEY", ""),
+        llama_provider = env_get("CHAT_LLAMA_PROVIDER", "llama.cpp"),
+        llama_models = split_csv(env_get("CHAT_LLAMA_MODELS", "")),
+        fallback_provider = fallback_provider,
+        fallback_model = fallback_model,
+        websearch = nzchar(env_get("TAVILY_API_KEY", "")),
+        pi_bin = env_get("CHAT_PI_BIN", "pi"),
+        duckdb_bin = env_get("CHAT_DUCKDB_BIN", "duckdb"),
+        # Fixed (not tempdir()) so a restart can sweep the workdirs the previous
+        # process leaked: api_on("end") does not run on SIGTERM.
+        workdir_root = env_get("CHAT_WORKDIR_ROOT", file.path(dirname(tempdir()), "plumber2-chat")),
+        max_sessions = env_int("CHAT_MAX_SESSIONS", 4L),
+        daily_turns = env_int("CHAT_DAILY_TURNS", 50L)
+    )
 }
 
 # --- helpers ---------------------------------------------------------------
@@ -104,6 +135,11 @@ normalize_claim_namespace <- function(namespace) {
         return("")
     }
     sub("/?$", "/", namespace)
+}
+
+split_csv <- function(value) {
+    parts <- trimws(strsplit(value, ",", fixed = TRUE)[[1]])
+    parts[nzchar(parts)]
 }
 
 env_flag <- function(name, default) {

@@ -17,7 +17,9 @@ function(request, response, server, datastore, query) {
             explore,
             lang,
             state$translations,
-            can_write = session_can(state, datastore, "write:datasets")
+            can_write = session_can(state, datastore, "write:datasets"),
+            chat = chat_visible(state, datastore),
+            chat_session = chat_display_session(state, datastore, explore$selected_id)
         )
     })
 }

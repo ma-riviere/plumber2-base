@@ -99,7 +99,11 @@ touch_session <- function(datastore, auth) {
     invisible(auth)
 }
 
+# Logout and expiry are chat teardown points too: the pi subprocess and its
+# workdir (which holds the user's dataset) must not outlive the session that
+# created them.
 destroy_auth_session <- function(datastore) {
+    chat_cleanup_key(datastore$session$auth$csrf_id)
     datastore$session$auth <- NULL
     datastore$session$oidc <- NULL
     invisible()

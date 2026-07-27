@@ -14,6 +14,12 @@ assemble_api <- function(state, env = parent.frame(), enable_access_log = TRUE) 
         state$con
     )
 
+    # Persisted chat transcripts share the datastore tables under a dedicated
+    # storr namespace. Safe next to firesale: its stale-session sweep clears
+    # only the namespaces recorded in `_id_access` (session ids), and
+    # storr$gc() is mark-sweep, keeping every blob a live key references.
+    state$chat_store <- storr::storr(driver)
+
     # strict_transport_security = NULL disables firesafety's app-level http->https
     # 308 redirect (installed whenever HSTS is set). The service runs behind a
     # TLS-terminating proxy and sees plain http internally, so it must not self
@@ -72,6 +78,14 @@ assemble_api <- function(state, env = parent.frame(), enable_access_log = TRUE) 
     plumber2::api_on(api, "end", function(...) {
         try(DBI::dbDisconnect(state$con), silent = TRUE)
     })
+
+    # Chat workdirs outlive a SIGTERM (api_on("end") does not run), so the
+    # previous process's leftovers are swept at startup, not at shutdown.
+    if (isTRUE(config$chat$enabled)) {
+        plumber2::api_on(api, "start", function(...) {
+            try(chat_sweep_workdirs(config), silent = TRUE)
+        })
+    }
 
     # In prod the only network path is Traefik, which sanitizes X-Forwarded-*
     # (only the CF-authenticated peer's values survive): trusting them makes
@@ -155,6 +169,9 @@ build_state <- function(config, base_dir = ".") {
     list(
         config = config,
         con = connect_pg(config$pg),
+        # Resolved once: the chat subprocess assets (.pi/) are located from here,
+        # and handlers must not depend on the process working directory.
+        base_dir = normalizePath(base_dir),
         manifest = yyjsonr::read_json_file(file.path(dist_dir, "manifest.json")),
         translations = load_translations(file.path(base_dir, "assets", "translations.json")),
         template = paste(

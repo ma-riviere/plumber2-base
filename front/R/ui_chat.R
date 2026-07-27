@@ -1,0 +1,223 @@
+# Dataset chat widget: a floating launcher (bottom-right, collapsed on every
+# page load) that expands into a card panel with the transcript, the activity
+# indicator and the input form.
+#
+# Only #chat-stream polls. The form is deliberately OUTSIDE the polled region:
+# re-rendering it every second would fight the user's typing and focus. Every
+# polling fragment carries the CHAT GENERATION id, so a poll belonging to a
+# reset/replaced conversation can never swap itself over a newer one.
+
+chat_stream_url <- function(chat_id) {
+    sprintf("/partials/chat/stream?chat=%s", utils::URLencode(chat_id %||% "", reserved = TRUE))
+}
+
+# The whole widget, mounted on Explore when a dataset is selected.
+chat_widget_html <- function(session, dataset_id, lang, translations) {
+    htmltools::div(
+        class = "chat-widget",
+        id = "chat-widget",
+        htmltools::tags$button(
+            type = "button",
+            class = "btn btn-primary chat-launcher",
+            id = "chat-launcher",
+            `data-chat-toggle` = "",
+            `aria-controls` = "chat-panel",
+            `aria-expanded` = "false",
+            bs_icon("chat-dots", class = "me-1"),
+            tr("Ask about this dataset", lang, translations)
+        ),
+        htmltools::div(
+            class = "card chat-panel d-none",
+            id = "chat-panel",
+            htmltools::div(
+                class = "card-header d-flex align-items-center justify-content-between",
+                htmltools::tags$span(class = "fw-semibold", tr("Dataset assistant", lang, translations)),
+                htmltools::div(
+                    class = "d-flex align-items-center gap-2",
+                    htmltools::tags$button(
+                        type = "button",
+                        class = "btn-close",
+                        `data-chat-toggle` = "",
+                        `aria-label` = tr("Close", lang, translations)
+                    ),
+                    htmltools::tags$button(
+                        type = "button",
+                        class = "btn btn-sm btn-outline-secondary text-nowrap",
+                        `hx-post` = "/partials/chat/reset",
+                        `hx-vals` = sprintf('{"dataset": %d}', as.integer(dataset_id)),
+                        `hx-target` = "#chat-stream",
+                        `hx-swap` = "outerHTML",
+                        `hx-sync` = "#chat-stream:replace",
+                        tr("New chat", lang, translations)
+                    )
+                )
+            ),
+            htmltools::div(
+                class = "card-body chat-body",
+                htmltools::HTML(chat_stream_html(session, dataset_id, lang, translations))
+            ),
+            htmltools::div(
+                class = "card-footer",
+                htmltools::HTML(chat_form_html(dataset_id, lang, translations)),
+                htmltools::p(
+                    class = "chat-privacy text-muted small mb-0 mt-2",
+                    tr(
+                        "Your question and values from this dataset are sent to a remote model provider.",
+                        lang,
+                        translations
+                    )
+                )
+            )
+        )
+    )
+}
+
+# The polled region. It re-fetches itself while a turn is in flight and stops
+# (no hx-trigger) as soon as the session is idle, errored or gone.
+chat_stream_html <- function(session, dataset_id, lang, translations, notice = NULL) {
+    active <- chat_is_active(session)
+    attrs <- list(
+        id = "chat-stream",
+        class = "chat-stream",
+        role = "log",
+        `aria-live` = "polite"
+    )
+    if (active) {
+        attrs <- c(
+            attrs,
+            list(
+                `hx-get` = chat_stream_url(session$id),
+                `hx-trigger` = "load delay:1s",
+                `hx-target` = "this",
+                `hx-swap` = "outerHTML",
+                `hx-sync` = "#chat-stream:drop"
+            )
+        )
+    }
+    body <- list(
+        if (!is.null(notice)) chat_notice_html(notice, lang, translations),
+        if (length(session$transcript %||% list()) == 0L && is.null(notice)) {
+            htmltools::p(
+                class = "text-muted small mb-0",
+                tr("Ask a question about this dataset", lang, translations)
+            )
+        },
+        lapply(session$transcript %||% list(), function(entry) chat_message_html(entry, lang, translations)),
+        if (active) chat_pending_html(session, lang, translations),
+        if (identical(session$status, "error")) {
+            chat_notice_html(session$error %||% "The assistant connection failed", lang, translations)
+        }
+    )
+    render_tags(do.call(htmltools::div, c(attrs, list(body))))
+}
+
+# The input form, never inside the polled region. `oob` re-states it after a
+# send so the textarea comes back empty without any client-side scripting.
+chat_form_html <- function(dataset_id, lang, translations, oob = FALSE) {
+    render_tags(htmltools::tags$form(
+        id = "chat-form",
+        class = "chat-form d-flex gap-2",
+        `hx-swap-oob` = if (oob) "outerHTML",
+        `hx-post` = "/partials/chat/send",
+        `hx-target` = "#chat-stream",
+        `hx-swap` = "outerHTML",
+        `hx-sync` = "#chat-stream:replace",
+        `hx-disabled-elt` = "find button",
+        htmltools::tags$input(type = "hidden", name = "dataset", value = as.integer(dataset_id)),
+        htmltools::tags$label(
+            class = "visually-hidden",
+            `for` = "chat-message",
+            tr("Ask a question about this dataset", lang, translations)
+        ),
+        htmltools::tags$textarea(
+            id = "chat-message",
+            name = "message",
+            class = "form-control form-control-sm",
+            rows = "2",
+            maxlength = as.character(CHAT_MAX_PROMPT_CHARS),
+            placeholder = tr("Ask a question about this dataset", lang, translations)
+        ),
+        htmltools::tags$button(
+            type = "submit",
+            class = "btn btn-primary btn-sm align-self-end",
+            `aria-label` = tr("Send", lang, translations),
+            bs_icon("send")
+        )
+    ))
+}
+
+# --- pieces --------------------------------------------------------------------
+
+chat_message_html <- function(entry, lang, translations) {
+    if (identical(entry$role, "error")) {
+        return(chat_notice_html(entry$error, lang, translations))
+    }
+    is_user <- identical(entry$role, "user")
+    body <- if (is_user) {
+        htmltools::div(class = "chat-text", htmltools::HTML(chat_escape_text(entry$text)))
+    } else {
+        htmltools::div(class = "chat-markdown", htmltools::HTML(chat_render_markdown(entry$text %||% "")))
+    }
+    htmltools::div(
+        class = paste0("chat-message chat-message-", if (is_user) "user" else "assistant"),
+        if (!is_user) chat_chips_html(entry$chips, lang, translations),
+        body
+    )
+}
+
+# The live half of a turn: what has streamed so far (escaped, unparsed) plus the
+# current activity chip.
+chat_pending_html <- function(session, lang, translations) {
+    text <- session$stream_text %||% ""
+    htmltools::div(
+        class = "chat-message chat-message-assistant chat-message-pending",
+        chat_chips_html(session$chips, lang, translations),
+        if (nzchar(text)) htmltools::div(class = "chat-text", htmltools::HTML(chat_escape_text(text))),
+        chat_activity_html(session, lang, translations)
+    )
+}
+
+chat_activity_html <- function(session, lang, translations) {
+    activity <- session$activity
+    label <- if (is.null(activity)) {
+        tr("Thinking", lang, translations)
+    } else if (identical(activity$kind, "tool")) {
+        chat_tool_label(activity$tool, lang, translations)
+    } else {
+        tr("Thinking", lang, translations)
+    }
+    htmltools::div(
+        class = "chat-activity text-muted small",
+        htmltools::tags$span(class = "spinner-border spinner-border-sm me-2", `aria-hidden` = "true"),
+        label
+    )
+}
+
+chat_chips_html <- function(chips, lang, translations) {
+    chips <- chips %||% list()
+    if (length(chips) == 0L) {
+        return(NULL)
+    }
+    htmltools::div(
+        class = "chat-chips d-flex flex-wrap gap-1 mb-1",
+        lapply(chips, function(chip) {
+            htmltools::tags$span(
+                class = paste0("badge chat-chip", if (isTRUE(chip$done)) " chat-chip-done" else ""),
+                chat_tool_label(chip$tool, lang, translations)
+            )
+        })
+    )
+}
+
+chat_tool_label <- function(tool, lang, translations) {
+    key <- CHAT_TOOL_LABELS[[tool %||% ""]] %||% "Working"
+    tr(key, lang, translations)
+}
+
+chat_notice_html <- function(key, lang, translations) {
+    htmltools::div(
+        class = "alert alert-warning py-2 px-3 small mb-2",
+        role = "alert",
+        tr(key %||% "The assistant connection failed", lang, translations)
+    )
+}

@@ -45,6 +45,10 @@
             "fr": "Vos jeux de données téléversés."
         },
         {
+            "en": "Dataset",
+            "fr": "Jeu de données"
+        },
+        {
             "en": "Datasets",
             "fr": "Jeux de données"
         },
@@ -191,14 +195,6 @@
         {
             "en": "CSV File(s)",
             "fr": "Fichier(s) CSV"
-        },
-        {
-            "en": "Drag & drop, or click Browse (max 10MB per file)",
-            "fr": "Glissez-déposez, ou cliquez sur Parcourir (max 10Mo par fichier)"
-        },
-        {
-            "en": "No files selected",
-            "fr": "Aucun fichier sélectionné"
         },
         {
             "en": "Please select at least one CSV file",
@@ -763,6 +759,102 @@
         {
             "en": "CSV only, max 100MB per file",
             "fr": "CSV uniquement, 100 Mo max par fichier"
+        },
+        {
+            "en": "Ask about this dataset",
+            "fr": "Interroger ce jeu de données"
+        },
+        {
+            "en": "Dataset assistant",
+            "fr": "Assistant de données"
+        },
+        {
+            "en": "New chat",
+            "fr": "Nouvelle discussion"
+        },
+        {
+            "en": "Ask a question about this dataset",
+            "fr": "Posez une question sur ce jeu de données"
+        },
+        {
+            "en": "Send",
+            "fr": "Envoyer"
+        },
+        {
+            "en": "Your question and values from this dataset are sent to a remote model provider.",
+            "fr": "Votre question et des valeurs de ce jeu de données sont transmises à un fournisseur de modèle distant."
+        },
+        {
+            "en": "Thinking",
+            "fr": "Réflexion en cours"
+        },
+        {
+            "en": "Querying data",
+            "fr": "Interrogation des données"
+        },
+        {
+            "en": "Searching the web",
+            "fr": "Recherche sur le Web"
+        },
+        {
+            "en": "Reading the dataset",
+            "fr": "Lecture du jeu de données"
+        },
+        {
+            "en": "Working",
+            "fr": "Traitement en cours"
+        },
+        {
+            "en": "The assistant is not available right now",
+            "fr": "L'assistant n'est pas disponible pour le moment"
+        },
+        {
+            "en": "Sign in to use the dataset assistant",
+            "fr": "Connectez-vous pour utiliser l'assistant de données"
+        },
+        {
+            "en": "No chat model is available right now",
+            "fr": "Aucun modèle de conversation n'est disponible pour le moment"
+        },
+        {
+            "en": "The assistant could not prepare this dataset",
+            "fr": "L'assistant n'a pas pu préparer ce jeu de données"
+        },
+        {
+            "en": "The assistant connection failed",
+            "fr": "La connexion à l'assistant a échoué"
+        },
+        {
+            "en": "The assistant could not answer",
+            "fr": "L'assistant n'a pas pu répondre"
+        },
+        {
+            "en": "The answer took too long and was stopped",
+            "fr": "La réponse a pris trop de temps et a été interrompue"
+        },
+        {
+            "en": "The assistant produced too much output",
+            "fr": "L'assistant a produit trop de contenu"
+        },
+        {
+            "en": "The assistant used too many tools for one question",
+            "fr": "L'assistant a utilisé trop d'outils pour une seule question"
+        },
+        {
+            "en": "Please wait for the current answer to finish",
+            "fr": "Veuillez attendre la fin de la réponse en cours"
+        },
+        {
+            "en": "The assistant is busy, please try again in a moment",
+            "fr": "L'assistant est occupé, réessayez dans un instant"
+        },
+        {
+            "en": "You have reached today's question limit",
+            "fr": "Vous avez atteint la limite de questions du jour"
+        },
+        {
+            "en": "Your question is too long",
+            "fr": "Votre question est trop longue"
         }
     ]
 }

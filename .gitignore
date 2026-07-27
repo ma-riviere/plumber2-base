@@ -37,4 +37,8 @@ Thumbs.db
 CLAUDE.md
 TODO.md
 NOTES.md
-PLAN.md
+*PLAN*.md
+
+# Local, machine-specific MCP server configs
+.mcp.json
+.codex/config.toml

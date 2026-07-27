@@ -6,6 +6,7 @@ routes:
 - routes/partials_home.R
 - routes/partials_explore.R
 - routes/partials_model.R
+- routes/partials_chat.R
 - routes/partials_admin.R
 - routes/account.R
 - routes/profile.R

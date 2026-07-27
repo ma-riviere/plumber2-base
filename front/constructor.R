@@ -24,6 +24,12 @@ local({
         "ui_admin.R",
         "ui_account.R",
         "ui_profile.R",
+        "chat_rpc.R",
+        "chat_markdown.R",
+        "chat_models.R",
+        "chat_session.R",
+        "chat_supervisor.R",
+        "ui_chat.R",
         "app.R"
     )
     for (helper in helpers) {

@@ -1,0 +1,62 @@
+# Model selection policy: prefer the platform's private llama.cpp router when it
+# already has one of the configured aliases LOADED, otherwise fall back to the
+# configured remote provider.
+#
+# The router loads models on demand and a cold load takes minutes, so asking for
+# an unloaded alias would hang the first turn; only `status.value == "loaded"`
+# entries are eligible. One provider per session: a failed turn is never
+# replayed elsewhere; pi's auto-retry may re-ask the SAME provider within the
+# turn, and the walltime deadline caps it either way.
+
+CHAT_MODELS_TIMEOUT_SECONDS <- 2
+
+chat_choose_model <- function(config) {
+    chat <- config$chat
+    loaded <- chat_router_loaded(chat)
+    for (alias in chat$llama_models) {
+        if (alias %in% loaded) {
+            return(list(provider = chat$llama_provider, model = alias))
+        }
+    }
+    if (nzchar(chat$fallback_provider) && nzchar(chat$fallback_model)) {
+        return(list(provider = chat$fallback_provider, model = chat$fallback_model))
+    }
+    stop(chat_error("No chat model is available right now"))
+}
+
+# Model ids the router reports as loaded. An unreachable or malformed router is
+# not an error here - it just means "nothing loaded", and the fallback applies.
+chat_router_loaded <- function(chat) {
+    if (!nzchar(chat$llama_base_url) || length(chat$llama_models) == 0L) {
+        return(character())
+    }
+    body <- tryCatch(
+        {
+            req <- httr2::request(paste0(chat$llama_base_url, "/models")) |>
+                httr2::req_timeout(CHAT_MODELS_TIMEOUT_SECONDS) |>
+                httr2::req_error(is_error = function(resp) FALSE)
+            if (nzchar(chat$llama_api_key)) {
+                req <- httr2::req_auth_bearer_token(req, chat$llama_api_key)
+            }
+            resp <- httr2::req_perform(req)
+            if (httr2::resp_status(resp) != 200L) {
+                return(NULL)
+            }
+            be_parse_json(resp)
+        },
+        error = function(e) NULL
+    )
+    entries <- body$data
+    if (!is.list(entries)) {
+        return(character())
+    }
+    ids <- vapply(
+        entries,
+        function(entry) {
+            status <- be_scalar(entry$status$value) %||% be_scalar(entry$status) %||% ""
+            if (identical(as.character(status), "loaded")) as.character(be_scalar(entry$id) %||% "") else ""
+        },
+        character(1)
+    )
+    ids[nzchar(ids)]
+}

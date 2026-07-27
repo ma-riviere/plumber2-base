@@ -1,0 +1,10 @@
+{"type":"message_update","assistantMessageEvent":{"type":"text_start","contentIndex":0}}
+{"type":"tool_execution_start","toolCallId":"call_1","toolName":"query","args":{"sql":"SELECT avg(x) FROM dataset;"}}
+{"type":"tool_execution_end","toolCallId":"call_1","toolName":"query","isError":false}
+{"type":"message_update","assistantMessageEvent":{"type":"thinking_delta","delta":"private chain of thought"}}
+{"type":"message_update","assistantMessageEvent":{"type":"text_delta","contentIndex":0,"delta":"The mean is "}}
+{"type":"message_update","assistantMessageEvent":{"type":"text_delta","contentIndex":0,"delta":"42."}}
+{"type":"agent_end","willRetry":true}
+{"type":"auto_retry_start","attempt":1,"maxAttempts":3,"delayMs":10,"errorMessage":"529 overloaded"}
+{"type":"agent_end","willRetry":false}
+{"type":"agent_settled"}

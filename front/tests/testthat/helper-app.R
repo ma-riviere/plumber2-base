@@ -49,7 +49,14 @@ TEST_CLAIM_NS <- "https://plumber-base.test/"
 # `bypass` toggles guest mode; `auth0` overrides tenant values (e.g. a webfakes
 # base URL in `domain`); `backend_url` points the backend client somewhere (by
 # default a canned fake backend is started, see backend_fake_app).
-local_front_api <- function(env = parent.frame(), bypass = TRUE, auth0 = list(), backend_url = NULL, admin = FALSE) {
+local_front_api <- function(
+    env = parent.frame(),
+    bypass = TRUE,
+    auth0 = list(),
+    backend_url = NULL,
+    admin = FALSE,
+    chat = list()
+) {
     con <- fe_admin_connect_or_skip()
     schema <- sprintf("fe_test_%d_%d", Sys.getpid(), sample.int(1e6L, 1L))
     quoted <- DBI::dbQuoteIdentifier(con, schema)
@@ -77,6 +84,7 @@ local_front_api <- function(env = parent.frame(), bypass = TRUE, auth0 = list(),
         backend_url = backend_url,
         session_key = TEST_SESSION_KEY,
         pg = list(),
+        chat = utils::modifyList(test_chat_config(), chat),
         auth0 = utils::modifyList(
             list(
                 domain = "",
@@ -93,6 +101,7 @@ local_front_api <- function(env = parent.frame(), bypass = TRUE, auth0 = list(),
     state <- list(
         config = config,
         con = con,
+        base_dir = normalizePath(base_dir),
         manifest = yyjsonr::read_json_file(file.path(base_dir, "dist", "manifest.json")),
         translations = load_translations(file.path(base_dir, "assets", "translations.json")),
         template = paste(
@@ -119,6 +128,7 @@ local_front_api <- function(env = parent.frame(), bypass = TRUE, auth0 = list(),
         "partials_home.R",
         "partials_explore.R",
         "partials_model.R",
+        "partials_chat.R",
         "partials_admin.R",
         "account.R",
         "profile.R"
@@ -127,6 +137,34 @@ local_front_api <- function(env = parent.frame(), bypass = TRUE, auth0 = list(),
         plumber2::api_parse,
         c(list(pa), lapply(route_files, function(f) file.path(base_dir, "routes", f)))
     ))
+}
+
+# Creating a chat session ingests the dataset with the real DuckDB CLI, so every
+# chat test needs it on PATH (see the Dockerfile pin for the version).
+skip_if_no_duckdb <- function() {
+    testthat::skip_if_not(nzchar(Sys.which("duckdb")), "the duckdb CLI is not installed")
+}
+
+# Chat config for the in-process api: disabled by default (so the existing page
+# tests keep their markup), and pointed at the stub `pi` executable when a test
+# turns it on.
+test_chat_config <- function() {
+    list(
+        enabled = FALSE,
+        allow_guests = TRUE,
+        llama_base_url = "",
+        llama_api_key = "",
+        llama_provider = "llama.cpp",
+        llama_models = character(),
+        fallback_provider = "stub",
+        fallback_model = "stub-model",
+        websearch = FALSE,
+        pi_bin = normalizePath(file.path("fixtures", "stub-pi"), mustWork = FALSE),
+        duckdb_bin = "duckdb",
+        workdir_root = file.path(tempdir(), "chat-test"),
+        max_sessions = 4L,
+        daily_turns = 50L
+    )
 }
 
 # --- auth-flow helpers -------------------------------------------------------
@@ -468,8 +506,13 @@ backend_fake_app <- function(admin = FALSE) {
         )
     })
     app$get("/v1/datasets/:id/data.csv", function(req, res) {
-        if (!identical(req$params$id, "1")) {
+        if (!req$params$id %in% c("1", "2")) {
             return(problem(res, 404L, "Not Found", "no such dataset"))
+        }
+        if (identical(req$params$id, "2")) {
+            res$set_header("Content-Disposition", 'attachment; filename="trees.csv"')
+            res$set_type("text/csv")
+            return(res$send("girth,height,volume\n8.3,70,10.3\n"))
         }
         res$set_header("Content-Disposition", 'attachment; filename="cars.csv"')
         res$set_type("text/csv")

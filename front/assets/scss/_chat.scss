@@ -1,0 +1,100 @@
+// Dataset chat widget: a floating launcher pinned bottom-right that expands
+// into a fixed-size card panel. Both live in the same wrapper; .chat-open
+// (toggled in assets/js/app.js) swaps which one is visible, so no inline style
+// is ever needed (strict CSP).
+
+.chat-widget {
+    position: fixed;
+    right: $spacing-lg;
+    bottom: $spacing-lg;
+    z-index: 1040;
+
+    &.chat-open .chat-launcher {
+        display: none;
+    }
+}
+
+.chat-launcher {
+    border-radius: 2rem;
+    box-shadow: $shadow-md;
+}
+
+.chat-panel {
+    // libsass evaluates min() itself, so the viewport clamp is a max-width.
+    width: 24rem;
+    max-width: calc(100vw - #{$spacing-lg * 2});
+    box-shadow: $shadow-md;
+
+    .card-body {
+        padding: $spacing-sm $spacing-md;
+    }
+}
+
+.chat-stream {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+    height: 22rem;
+    overflow-y: auto;
+}
+
+.chat-message {
+    max-width: 90%;
+    padding: $spacing-xs $spacing-sm;
+    border-radius: $border-radius;
+    font-size: 0.875rem;
+}
+
+.chat-message-user {
+    align-self: flex-end;
+    background-color: $primary;
+    color: $white;
+}
+
+.chat-message-assistant {
+    align-self: flex-start;
+    background-color: $gray-100;
+    color: $gray-800;
+}
+
+// The streaming buffer is inserted as escaped plain text, so newlines have to
+// survive as whitespace rather than as markup.
+.chat-text {
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.chat-markdown {
+    word-break: break-word;
+
+    > :last-child {
+        margin-bottom: 0;
+    }
+
+    pre {
+        padding: $spacing-xs $spacing-sm;
+        border-radius: $border-radius-sm;
+        background-color: $gray-200;
+        overflow-x: auto;
+    }
+}
+
+.chat-chip {
+    background-color: $gray-300;
+    color: $gray-700;
+    font-weight: 400;
+
+    &.chat-chip-done {
+        background-color: $gray-200;
+        color: $gray-500;
+    }
+}
+
+.chat-activity {
+    display: flex;
+    align-items: center;
+}
+
+.chat-privacy {
+    line-height: 1.2;
+}

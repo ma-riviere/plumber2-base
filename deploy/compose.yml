@@ -72,9 +72,15 @@ services:
     # AUTH0_AUDIENCE, AUTH0_CLAIM_NAMESPACE, AUTH0_MGMT_CLIENT_ID,
     # AUTH0_MGMT_CLIENT_SECRET, SESSION_KEY (required: false for the local
     # overlay; prod startup assertions enforce them).
+    # harness.env: the platform's shared agent-harness credentials (LLAMA_*,
+    # provider keys, TAVILY_API_KEY) for the dataset chatbot. required: false so
+    # a host without the harness still starts - CHAT_ENABLED auto-hides the
+    # widget when no model source is configured.
     env_file:
       - db.env
       - path: app.env
+        required: false
+      - path: /srv/harness/harness.env
         required: false
     environment:
       ENVIRONMENT: prod
@@ -84,6 +90,13 @@ services:
       BACKEND_URL: http://back:8081
       APP_URL: https://plumber2-base.ma-riviere.com
       BACKEND_PUBLIC_URL: https://plumber2-base-api.ma-riviere.com
+    # Backstop for the chat subprocesses: the app caps concurrent sessions and
+    # per-turn walltime itself, but a runaway Node process must not be able to
+    # take the whole (shared, single-VPS) host down. pids_limit also bounds a
+    # fork bomb reached through some future tool.
+    cpus: "2.0"
+    mem_limit: 2g
+    pids_limit: 512
     labels:
       traefik.enable: "true"
       traefik.http.routers.pb-front.rule: "Host(`plumber2-base.ma-riviere.com`)"

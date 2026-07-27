@@ -98,6 +98,32 @@
         if (target) target.textContent = slider.value;
     });
 
+    // Dataset chat widget: the launcher and the panel's close button share
+    // [data-chat-toggle]. Collapsed on every page load (the server renders the
+    // panel with .d-none); the .chat-open class on the wrapper is what hides
+    // the launcher while the panel is up.
+    document.addEventListener("click", function (event) {
+        if (!event.target.closest("[data-chat-toggle]")) return;
+        var widget = document.getElementById("chat-widget");
+        var panel = document.getElementById("chat-panel");
+        if (!widget || !panel) return;
+        var open = !panel.classList.toggle("d-none");
+        widget.classList.toggle("chat-open", open);
+        var launcher = document.getElementById("chat-launcher");
+        if (launcher) launcher.setAttribute("aria-expanded", open ? "true" : "false");
+        if (open) {
+            var input = document.getElementById("chat-message");
+            if (input) input.focus();
+        }
+    });
+
+    // Keep the newest chat message in view: the transcript is re-rendered whole
+    // on every poll, which resets the scroll position.
+    document.addEventListener("htmx:afterSwap", function () {
+        var stream = document.getElementById("chat-stream");
+        if (stream) stream.scrollTop = stream.scrollHeight;
+    });
+
     // 5xx and network failures are configured not to swap (see the htmx-config
     // meta tag); surface them as a toast instead of failing silently.
     function serverErrorToast() {

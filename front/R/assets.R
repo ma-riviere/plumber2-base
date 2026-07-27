@@ -86,9 +86,12 @@ fingerprint_file <- function(source_path, logical, dist) {
 # result under the logical name css/app.css. @imports resolve relative to the
 # entry file, so the whole scss/ tree is bundled into one output.
 fingerprint_app_css <- function(scss_entry, dist) {
+    # cache = FALSE: sass's persistent cache keys on the ENTRY file only, so an
+    # edited @import partial would silently serve the stale compiled CSS.
     css <- sass::sass(
         sass::sass_file(scss_entry),
-        options = sass::sass_options(output_style = "compressed")
+        options = sass::sass_options(output_style = "compressed"),
+        cache = FALSE
     )
     write_fingerprinted(charToRaw(enc2utf8(as.character(css))), "css/app.css", dist)
 }

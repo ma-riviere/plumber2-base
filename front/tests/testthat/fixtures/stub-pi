@@ -1,0 +1,38 @@
+#!/usr/bin/env Rscript
+# Stand-in for the `pi` binary in CI: consumes RPC commands on stdin and emits
+# correlated JSONL on stdout, so the chat endpoints can be exercised end to end
+# without Node, a pi install or any provider key. Deliberately base-R only (the
+# subprocess environment is scrubbed and carries no R library path).
+
+connection <- file("stdin", "r")
+
+emit <- function(record) {
+    cat(record, "\n", sep = "")
+    flush(stdout())
+}
+
+field <- function(line, name) {
+    found <- regmatches(line, regexec(paste0('"', name, '"[[:space:]]*:[[:space:]]*"([^"]*)"'), line))[[1]]
+    if (length(found) == 2L) found[2] else ""
+}
+
+repeat {
+    line <- readLines(connection, n = 1L, warn = FALSE)
+    if (length(line) == 0L) {
+        break
+    }
+    if (!nzchar(trimws(line))) {
+        next
+    }
+    type <- field(line, "type")
+    id <- field(line, "id")
+    emit(sprintf('{"id":"%s","type":"response","command":"%s","success":true}', id, type))
+    if (identical(type, "prompt")) {
+        emit('{"type":"tool_execution_start","toolCallId":"t1","toolName":"query","args":{}}')
+        emit('{"type":"tool_execution_end","toolCallId":"t1","toolName":"query","isError":false}')
+        emit('{"type":"message_update","assistantMessageEvent":{"type":"text_delta","delta":"Stub "}}')
+        emit('{"type":"message_update","assistantMessageEvent":{"type":"text_delta","delta":"answer."}}')
+        emit('{"type":"agent_end","willRetry":false}')
+        emit('{"type":"agent_settled"}')
+    }
+}
