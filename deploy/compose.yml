@@ -90,9 +90,12 @@ services:
       BACKEND_URL: http://back:8081
       APP_URL: https://plumber2-base.ma-riviere.com
       BACKEND_PUBLIC_URL: https://plumber2-base-api.ma-riviere.com
-      # The widget still auto-hides unless harness.env provides a model source
-      # (LLAMA_BASE_URL or CHAT_FALLBACK_PROVIDER/MODEL).
+      # The fallback pair is the benchmarked prod path (2026-07-27); the key
+      # (NVIDIA_API_KEY) comes from harness.env. CHAT_LLAMA_MODELS stays unset:
+      # the router-alias path is unverified against the live llama.cpp router.
       CHAT_ENABLED: "true"
+      CHAT_FALLBACK_PROVIDER: nvidia
+      CHAT_FALLBACK_MODEL: nvidia/nemotron-3-ultra-550b-a55b
     # Backstop for the chat subprocesses: the app caps concurrent sessions and
     # per-turn walltime itself, but a runaway Node process must not be able to
     # take the whole (shared, single-VPS) host down. pids_limit also bounds a
