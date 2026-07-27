@@ -1,4 +1,21 @@
-// Small shared bits: toast stack spacing.
+// Small shared bits: toast stack spacing, htmx request indicators.
+
+// htmx's injected indicator styles are disabled (includeIndicatorStyles: false,
+// an inline <style> the strict CSP would block), so the equivalent rules live
+// here. .htmx-indicator-hide is the inverse: hidden WHILE a request is in
+// flight (e.g. a button icon the spinner replaces).
+.htmx-indicator {
+    display: none;
+}
+
+.htmx-request .htmx-indicator,
+.htmx-request.htmx-indicator {
+    display: inline-block;
+}
+
+.htmx-request .htmx-indicator-hide {
+    display: none;
+}
 
 #toasts .toast {
     box-shadow: $shadow-md;

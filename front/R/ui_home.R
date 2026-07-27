@@ -397,6 +397,9 @@ upload_modal <- function(lang, translations) {
             `hx-encoding` = "multipart/form-data",
             `hx-target` = "#upload-status",
             `hx-swap` = "innerHTML",
+            # Large uploads take a while: swap the submit icon for a spinner and
+            # block double-submits while the request is in flight.
+            `hx-disabled-elt` = "find button[type='submit']",
             body,
             htmltools::div(
                 class = "d-flex justify-content-end gap-2",
@@ -409,7 +412,11 @@ upload_modal <- function(lang, translations) {
                 htmltools::tags$button(
                     type = "submit",
                     class = "btn btn-primary",
-                    bs_icon("upload", class = "me-1"),
+                    htmltools::tags$span(
+                        class = "spinner-border spinner-border-sm me-1 htmx-indicator",
+                        `aria-hidden` = "true"
+                    ),
+                    bs_icon("upload", class = "me-1 htmx-indicator-hide"),
                     tr("Upload", lang, translations)
                 )
             )
