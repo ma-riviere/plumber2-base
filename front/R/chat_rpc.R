@@ -11,8 +11,9 @@
 #   - a user turn ends on `agent_settled`, NOT on `agent_end`: pi may still
 #     retry, compact or drain queued follow-ups after agent_end.
 #   - streaming text deltas are nested: message_update.assistantMessageEvent
-#     with type "text_delta" (field `delta`). Thinking deltas surface only as a
-#     generic activity indicator - raw thinking content is never displayed.
+#     with type "text_delta" (field `delta`). Thinking deltas show only a
+#     generic activity indicator while streaming; the content accumulates into
+#     the settled entry's collapsed "Thoughts" block (escaped, never markdown).
 
 # Byte/size caps. A misbehaving or hostile subprocess must not be able to grow
 # the R heap or stall the single-threaded event loop.
@@ -21,6 +22,8 @@ CHAT_MAX_STDERR_BYTES <- 262144L
 CHAT_MAX_TURN_BYTES <- 8388608L
 CHAT_READ_CHUNK_BYTES <- 65536L
 CHAT_MAX_REPLY_CHARS <- 20000L
+CHAT_MAX_THINKING_CHARS <- 20000L
+CHAT_MAX_TOOL_ARGS_CHARS <- 2000L
 CHAT_MAX_TOOL_CALLS <- 24L
 CHAT_MAX_TURNS <- 30L
 CHAT_TRANSCRIPT_MESSAGES <- 40L
@@ -67,6 +70,7 @@ chat_new_state <- function(key, dataset_id, user_id, lang) {
     session$store_key <- NULL
     session$replay_context <- NULL
     session$stream_text <- ""
+    session$thinking_text <- ""
     session$chips <- list()
     session$activity <- NULL
     session$queued_prompt <- NULL
@@ -214,8 +218,15 @@ chat_apply_message_update <- function(session, event) {
             session$stream_text <- paste0(session$stream_text, as.character(delta))
         }
     } else if (kind %in% c("thinking_start", "thinking_delta")) {
-        # Only a generic indicator: raw thinking content is never surfaced.
+        # Live view shows only a generic indicator; the content accumulates for
+        # the settled entry's collapsed "Thoughts" block (persisted, escaped).
         session$activity <- list(kind = "thinking")
+        if (identical(kind, "thinking_delta")) {
+            delta <- be_scalar(inner$delta) %||% ""
+            if (nchar(session$thinking_text) < CHAT_MAX_THINKING_CHARS) {
+                session$thinking_text <- paste0(session$thinking_text, as.character(delta))
+            }
+        }
     } else if (identical(kind, "text_start")) {
         session$activity <- NULL
     }
@@ -230,8 +241,26 @@ chat_apply_tool_start <- function(session, event) {
     }
     session$activity <- list(kind = "tool", tool = tool)
     call_id <- as.character(be_scalar(event$toolCallId) %||% tool)
-    session$chips[[call_id]] <- list(tool = tool, done = FALSE)
+    session$chips[[call_id]] <- list(tool = tool, done = FALSE, args_text = chat_tool_args_text(tool, event$args))
     invisible(session)
+}
+
+# A display string for a tool call's arguments: the known tools carry one
+# meaningful string field; anything else (a future pi/extension bump) falls back
+# to compact JSON so the chip stays honest.
+chat_tool_args_text <- function(tool, args) {
+    if (!is.list(args) || length(args) == 0L) {
+        return(NULL)
+    }
+    known <- switch(tool %||% "", query = "sql", websearch = "query", read = "path", NULL)
+    text <- if (!is.null(known)) be_scalar(args[[known]])
+    if (is.null(text)) {
+        text <- tryCatch(yyjsonr::write_json_str(args, auto_unbox = TRUE), error = function(e) NULL)
+    }
+    if (is.null(text) || !nzchar(text)) {
+        return(NULL)
+    }
+    substr(as.character(text), 1L, CHAT_MAX_TOOL_ARGS_CHARS)
 }
 
 chat_apply_tool_end <- function(session, event) {
@@ -251,6 +280,7 @@ chat_apply_tool_end <- function(session, event) {
 chat_start_turn <- function(session, prompt) {
     session$status <- "streaming"
     session$stream_text <- ""
+    session$thinking_text <- ""
     session$chips <- list()
     session$activity <- NULL
     session$turn_bytes <- 0L
@@ -277,6 +307,7 @@ chat_settle_turn <- function(session) {
         chat_push_message(session, "error", NULL, error = "The assistant could not answer")
     }
     session$stream_text <- ""
+    session$thinking_text <- ""
     session$activity <- NULL
     session$status <- "idle"
     session$aborting <- FALSE
@@ -287,7 +318,14 @@ chat_settle_turn <- function(session) {
 }
 
 chat_push_message <- function(session, role, text, error = NULL) {
-    entry <- list(role = role, text = text, error = error, chips = session$chips)
+    thinking <- session$thinking_text %||% ""
+    entry <- list(
+        role = role,
+        text = text,
+        error = error,
+        chips = session$chips,
+        thinking = if (nzchar(thinking)) thinking
+    )
     session$transcript <- c(session$transcript, list(entry))
     if (length(session$transcript) > CHAT_TRANSCRIPT_MESSAGES) {
         session$transcript <- utils::tail(session$transcript, CHAT_TRANSCRIPT_MESSAGES)
@@ -308,6 +346,7 @@ chat_fail <- function(session, reason) {
     session$status <- "error"
     session$error <- reason
     session$stream_text <- ""
+    session$thinking_text <- ""
     session$activity <- NULL
     session$needs_cleanup <- TRUE
     chat_persist_transcript(session)

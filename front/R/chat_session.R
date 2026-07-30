@@ -138,7 +138,8 @@ chat_quota_take <- function(user_id, limit) {
 # at settlement without request context.
 
 CHAT_STORE_NAMESPACE <- "chat_transcripts"
-CHAT_REPLAY_MAX_CHARS <- 8000L
+CHAT_REPLAY_MAX_CHARS <- 16000L
+CHAT_REPLAY_THINKING_CHARS <- 2000L
 
 chat_transcript_key <- function(user_id, dataset_id) {
     sprintf("u%s:d%d", user_id, as.integer(dataset_id))
@@ -181,9 +182,10 @@ chat_forget <- function(state, user_id, dataset_id) {
     invisible()
 }
 
-# The revived agent's memory: the previous VISIBLE dialogue rendered into the
-# first prompt (newest entries kept when the cap trims). Error notices and tool
-# chips are display state and are not replayed.
+# The revived agent's memory: the previous dialogue rendered into the first
+# prompt (newest entries kept when the cap trims), including each answer's
+# persisted thinking (truncated) and tool calls so the model sees HOW it got
+# there, not just what it said. Error notices are display state and stay out.
 chat_replay_context <- function(transcript) {
     lines <- character()
     total <- 0L
@@ -196,6 +198,9 @@ chat_replay_context <- function(transcript) {
             next
         }
         line <- sprintf("%s: %s", entry$role, text)
+        if (identical(entry$role, "assistant")) {
+            line <- paste(c(chat_replay_turn_prefix(entry), line), collapse = "\n")
+        }
         total <- total + nchar(line)
         if (total > CHAT_REPLAY_MAX_CHARS) {
             break
@@ -211,6 +216,30 @@ chat_replay_context <- function(transcript) {
         "\n</previous_conversation>\n\n",
         "The exchange above already happened in an earlier session about this dataset; continue from it."
     )
+}
+
+# The non-visible half of a past assistant turn: its thinking (truncated - the
+# stored blob can be 20k chars and must not starve the replay budget) and the
+# tool calls it made, one line each.
+chat_replay_turn_prefix <- function(entry) {
+    parts <- character()
+    thinking <- entry$thinking %||% ""
+    if (nzchar(thinking)) {
+        parts <- c(
+            parts,
+            sprintf(
+                "assistant (thinking): %s",
+                substr(thinking, 1L, CHAT_REPLAY_THINKING_CHARS)
+            )
+        )
+    }
+    for (chip in entry$chips %||% list()) {
+        args_text <- chip$args_text %||% ""
+        if (nzchar(args_text)) {
+            parts <- c(parts, sprintf("assistant (tool %s): %s", chip$tool %||% "?", args_text))
+        }
+    }
+    parts
 }
 
 # What the widget shows for this dataset on a plain page render: the live

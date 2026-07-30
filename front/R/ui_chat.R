@@ -161,8 +161,23 @@ chat_message_html <- function(entry, lang, translations) {
     }
     htmltools::div(
         class = paste0("chat-message chat-message-", if (is_user) "user" else "assistant"),
+        if (!is_user) chat_thinking_html(entry$thinking, lang, translations),
         if (!is_user) chat_chips_html(entry$chips, lang, translations),
         body
+    )
+}
+
+# Persisted thinking, collapsed by default. Escaped plain text only: thinking
+# can quote dataset values and untrusted websearch content, so it never goes
+# through the markdown renderer.
+chat_thinking_html <- function(thinking, lang, translations) {
+    if (is.null(thinking) || !nzchar(thinking)) {
+        return(NULL)
+    }
+    htmltools::tags$details(
+        class = "chat-thinking",
+        htmltools::tags$summary(class = "text-muted small", tr("Thoughts", lang, translations)),
+        htmltools::div(class = "chat-thinking-body small", htmltools::HTML(chat_escape_text(thinking)))
     )
 }
 
@@ -202,9 +217,19 @@ chat_chips_html <- function(chips, lang, translations) {
     htmltools::div(
         class = "chat-chips d-flex flex-wrap gap-1 mb-1",
         lapply(chips, function(chip) {
-            htmltools::tags$span(
-                class = paste0("badge chat-chip", if (isTRUE(chip$done)) " chat-chip-done" else ""),
-                chat_tool_label(chip$tool, lang, translations)
+            badge_class <- paste0("badge chat-chip", if (isTRUE(chip$done)) " chat-chip-done" else "")
+            label <- chat_tool_label(chip$tool, lang, translations)
+            if (is.null(chip$args_text) || !nzchar(chip$args_text)) {
+                return(htmltools::tags$span(class = badge_class, label))
+            }
+            # Escaped monospace only: args are model-written (SQL, search terms).
+            htmltools::tags$details(
+                class = "chat-chip-details",
+                htmltools::tags$summary(class = badge_class, label),
+                htmltools::tags$pre(
+                    class = "chat-chip-args",
+                    htmltools::tags$code(htmltools::HTML(chat_escape_text(chip$args_text)))
+                )
             )
         })
     )

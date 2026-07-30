@@ -115,6 +115,51 @@
     }
 }
 
+// Expandable tool-call chip: the badge itself is the <summary>, the model's
+// arguments (SQL, search terms) unfold underneath as escaped monospace.
+.chat-chip-details {
+    summary {
+        cursor: pointer;
+        list-style: none;
+
+        &::-webkit-details-marker {
+            display: none;
+        }
+    }
+}
+
+.chat-chip-args {
+    margin: 0.25rem 0 0;
+    padding: 0.25rem 0.5rem;
+    background-color: $gray-100;
+    border: 1px solid $gray-300;
+    border-radius: $border-radius-sm;
+    font-size: 0.75rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 8rem;
+    overflow-y: auto;
+}
+
+// Persisted thinking, collapsed by default above the answer.
+.chat-thinking {
+    margin-bottom: 0.25rem;
+
+    summary {
+        cursor: pointer;
+    }
+}
+
+.chat-thinking-body {
+    color: $gray-600;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 10rem;
+    overflow-y: auto;
+    padding: 0.25rem 0.5rem;
+    border-left: 2px solid $gray-300;
+}
+
 .chat-activity {
     display: flex;
     align-items: center;

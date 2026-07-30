@@ -30,6 +30,8 @@ test_that("fragmented JSONL records are reassembled and the turn settles once", 
         expect_length(session$transcript, 1L)
         expect_equal(session$transcript[[1]]$role, "assistant")
         expect_equal(session$transcript[[1]]$text, "The mean is 42.")
+        expect_equal(session$transcript[[1]]$thinking, "private chain of thought")
+        expect_equal(session$transcript[[1]]$chips[["call_1"]]$args_text, "SELECT avg(x) FROM dataset;")
     }
 })
 
@@ -46,17 +48,32 @@ test_that("agent_end (with a retry in between) does not end the turn - only agen
     expect_length(session$transcript, 1L)
 })
 
-test_that("thinking deltas surface as a generic indicator and never as content", {
+test_that("thinking streams as a generic indicator but persists into the settled entry", {
     session <- new_test_session()
     chat_start_turn(session, "hello")
     chat_feed_stdout(
         session,
-        '{"type":"message_update","assistantMessageEvent":{"type":"thinking_delta","delta":"secret"}}\n'
+        '{"type":"message_update","assistantMessageEvent":{"type":"thinking_delta","delta":"<secret>"}}\n'
     )
     expect_equal(session$activity$kind, "thinking")
     expect_equal(session$stream_text, "")
+    # Live view: spinner only, never the content.
     html <- chat_stream_html(session, 1L, "en", load_translations(translations_path))
     expect_false(grepl("secret", html, fixed = TRUE))
+    chat_feed_stdout(
+        session,
+        paste0(
+            '{"type":"message_update","assistantMessageEvent":{"type":"text_delta","delta":"Done."}}\n',
+            '{"type":"agent_settled"}\n'
+        )
+    )
+    expect_equal(session$transcript[[1]]$thinking, "<secret>")
+    expect_equal(session$thinking_text, "")
+    # Settled view: the thinking shows in a collapsed details block, escaped.
+    html <- chat_stream_html(session, 1L, "en", load_translations(translations_path))
+    expect_match(html, "chat-thinking", fixed = TRUE)
+    expect_match(html, "&lt;secret&gt;", fixed = TRUE)
+    expect_false(grepl("<secret>", html, fixed = TRUE))
 })
 
 test_that("a settled turn persists the transcript to the store, and it restores", {
@@ -83,16 +100,23 @@ test_that("a settled turn persists the transcript to the store, and it restores"
     expect_null(chat_restore_transcript(state, 7L, 1L))
 })
 
-test_that("the replay context keeps the visible dialogue, newest first under the cap", {
+test_that("the replay context keeps the dialogue with thinking and tool calls, newest first under the cap", {
     expect_null(chat_replay_context(list()))
     transcript <- list(
         list(role = "user", text = "what is the mean"),
-        list(role = "assistant", text = "The mean is 42.", chips = list(list(tool = "query", done = TRUE))),
+        list(
+            role = "assistant",
+            text = "The mean is 42.",
+            thinking = "I should query the data.",
+            chips = list(list(tool = "query", done = TRUE, args_text = "SELECT avg(x) FROM dataset;"))
+        ),
         list(role = "error", text = NULL, error = "The assistant could not answer")
     )
     context <- chat_replay_context(transcript)
     expect_match(context, "<previous_conversation>", fixed = TRUE)
     expect_match(context, "user: what is the mean", fixed = TRUE)
+    expect_match(context, "assistant (thinking): I should query the data.", fixed = TRUE)
+    expect_match(context, "assistant (tool query): SELECT avg(x) FROM dataset;", fixed = TRUE)
     expect_match(context, "assistant: The mean is 42.", fixed = TRUE)
     expect_false(grepl("could not answer", context, fixed = TRUE))
 
@@ -111,10 +135,11 @@ test_that("tool executions become chips and are capped", {
     chat_start_turn(session, "hello")
     chat_feed_stdout(
         session,
-        '{"type":"tool_execution_start","toolCallId":"a","toolName":"websearch","args":{}}\n'
+        '{"type":"tool_execution_start","toolCallId":"a","toolName":"websearch","args":{"query":"mean height"}}\n'
     )
     expect_equal(session$activity$kind, "tool")
     expect_equal(session$chips[["a"]]$tool, "websearch")
+    expect_equal(session$chips[["a"]]$args_text, "mean height")
     expect_false(session$chips[["a"]]$done)
     chat_feed_stdout(session, '{"type":"tool_execution_end","toolCallId":"a","toolName":"websearch"}\n')
     expect_true(session$chips[["a"]]$done)
