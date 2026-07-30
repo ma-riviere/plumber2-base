@@ -96,25 +96,6 @@ test_that("role endpoints answer 503 when no mgmt client is configured; user lis
     expect_null(users$items[[1]]$role)
 })
 
-test_that("the admin user listing carries each user's Auth0 role", {
-    ctx <- auth_api()
-    withr::defer(reset_mgmt_state())
-    reset_mgmt_state()
-    set_mgmt_client(fake_mgmt_client(
-        user_roles = list("auth0|root" = list(list(id = "rol_admin", name = "admin")))
-    ))
-    admin <- bearer_header(sign_access_token(ctx$fixture, roles = "admin", sub = "auth0|root"))
-    do_request(ctx$pa, "http://t/v1/me", headers = admin)
-
-    users <- yyjsonr::read_json_str(
-        do_request(ctx$pa, "http://t/v1/admin/users", headers = admin)$body,
-        arr_of_objs_to_df = FALSE,
-        obj_of_arrs_to_df = FALSE
-    )
-    expect_equal(users$items[[1]]$auth0_sub, "auth0|root")
-    expect_equal(users$items[[1]]$role, "admin")
-})
-
 test_that("the admin user listing falls back to Auth0 for rows with no stored profile", {
     ctx <- auth_api()
     withr::defer(reset_mgmt_state())

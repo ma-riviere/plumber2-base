@@ -200,6 +200,8 @@ test_that("every guard's OpenAPI scheme has a type (prune_openapi crashes otherw
         api_key = api_key_guard()$open_api,
         bypass = BypassGuard$new(character())$open_api
     )
-    types <- vapply(schemes, function(x) x$type %in% c("oauth2", "openIdConnect"), logical(1))
-    expect_length(types, 3L)
+    # vapply with character(1) is the crash condition itself: a NULL/absent
+    # $type fails right here instead of at ignite.
+    types <- vapply(schemes, function(x) x$type, character(1))
+    expect_true(all(nzchar(types)))
 })

@@ -262,8 +262,9 @@ test_that("a failed handler aborts the drain without checkpointing its offset", 
     seed_user(pool, "auth0|bob")
     expect_true(handle_events_frame(pool, events_frame("good")) == "continue")
 
-    # A closed pool makes the handler's UPDATE throw.
-    broken <- local_migrated_pool()
+    # A closed pool makes the handler's UPDATE throw (no need for a second
+    # migrated schema: the query never reaches a table).
+    broken <- dev_pool_or_skip()
     pool::poolClose(broken)
     verdict <- handle_events_frame(broken, events_frame("bad", "user.deleted", list(user_id = "auth0|bob")))
 

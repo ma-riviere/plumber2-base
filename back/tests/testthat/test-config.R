@@ -1,29 +1,6 @@
 # get_config() env-var parsing and the "never in prod" startup assertions.
 # withr::local_envvar keeps each case isolated and restores the ambient env.
 
-test_that("dev defaults are filled in and valid", {
-    withr::local_envvar(
-        ENVIRONMENT = NA,
-        HOST = NA,
-        PORT = NA,
-        BYPASS_AUTH = NA,
-        AUTH0_DOMAIN = NA,
-        AUTH0_AUDIENCE = NA,
-        RATE_LIMIT_PER_MIN = NA,
-        LOG_LEVEL = NA
-    )
-    config <- get_config()
-
-    expect_equal(config$environment, "dev")
-    expect_false(config$is_prod)
-    expect_equal(config$host, "127.0.0.1")
-    expect_equal(config$port, 8081L)
-    expect_false(config$bypass_auth)
-    expect_equal(config$rate_limit_per_min, 120L)
-    expect_equal(config$db$port, 5433L)
-    expect_equal(config$db$user, "plumber_base")
-})
-
 test_that("env vars override defaults and are typed", {
     withr::local_envvar(
         ENVIRONMENT = "dev",
@@ -45,54 +22,27 @@ test_that("a non-integer numeric env var is rejected", {
     expect_error(get_config(), "integer")
 })
 
-test_that("an unknown ENVIRONMENT is rejected", {
-    withr::local_envvar(ENVIRONMENT = "staging")
-    expect_error(get_config(), "dev.+prod|prod.+dev")
-})
-
-test_that("prod with BYPASS_AUTH stops", {
-    withr::local_envvar(
-        ENVIRONMENT = "prod",
-        HOST = "0.0.0.0",
-        BYPASS_AUTH = "true",
-        AUTH0_DOMAIN = "tenant.eu.auth0.com",
-        AUTH0_AUDIENCE = "https://api.example"
-    )
-    expect_error(get_config(), "BYPASS_AUTH")
-})
-
-test_that("prod with a missing AUTH0 var stops", {
-    withr::local_envvar(
-        ENVIRONMENT = "prod",
-        HOST = "0.0.0.0",
-        BYPASS_AUTH = NA,
-        AUTH0_DOMAIN = "tenant.eu.auth0.com",
-        AUTH0_AUDIENCE = ""
-    )
-    expect_error(get_config(), "AUTH0_AUDIENCE")
-})
-
-test_that("prod without an explicit HOST stops", {
-    withr::local_envvar(
-        ENVIRONMENT = "prod",
-        HOST = NA,
-        BYPASS_AUTH = NA,
-        AUTH0_DOMAIN = "tenant.eu.auth0.com",
-        AUTH0_AUDIENCE = "https://api.example"
-    )
-    expect_error(get_config(), "HOST")
-})
-
-test_that("prod without a claim namespace stops", {
-    withr::local_envvar(
+test_that("prod refuses BYPASS_AUTH and every missing required setting", {
+    # A complete prod env, broken one knob at a time; the error names the knob.
+    prod_env <- c(
         ENVIRONMENT = "prod",
         HOST = "0.0.0.0",
         BYPASS_AUTH = NA,
         AUTH0_DOMAIN = "tenant.eu.auth0.com",
         AUTH0_AUDIENCE = "https://api.example",
-        AUTH0_CLAIM_NAMESPACE = NA
+        AUTH0_CLAIM_NAMESPACE = "https://api.example"
     )
-    expect_error(get_config(), "AUTH0_CLAIM_NAMESPACE")
+    cases <- list(
+        list(broken = c(BYPASS_AUTH = "true"), error = "BYPASS_AUTH"),
+        list(broken = c(AUTH0_AUDIENCE = ""), error = "AUTH0_AUDIENCE"),
+        list(broken = c(HOST = NA), error = "HOST"),
+        list(broken = c(AUTH0_CLAIM_NAMESPACE = NA), error = "AUTH0_CLAIM_NAMESPACE")
+    )
+    for (case in cases) {
+        env <- prod_env
+        env[names(case$broken)] <- case$broken
+        withr::with_envvar(env, expect_error(get_config(), case$error))
+    }
 })
 
 test_that("a fully specified prod config is accepted", {

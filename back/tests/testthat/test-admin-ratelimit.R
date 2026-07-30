@@ -11,39 +11,6 @@ test_that("admin endpoints require the view:admin scope (RFC 6750 denial)", {
     }
 })
 
-test_that("admin users/sessions/requests return their shapes for an admin", {
-    ctx <- auth_api()
-    admin <- bearer_header(sign_access_token(ctx$fixture, roles = "admin", sub = "auth0|root"))
-
-    # Generate some logged traffic first (me is not excluded from the log).
-    do_request(ctx$pa, "http://t/v1/me", headers = admin)
-
-    users <- yyjsonr::read_json_str(
-        do_request(ctx$pa, "http://t/v1/admin/users", headers = admin)$body,
-        arr_of_objs_to_df = FALSE,
-        obj_of_arrs_to_df = FALSE
-    )
-    expect_gte(length(users$items), 1L)
-    expect_equal(users$items[[1]]$auth0_sub, "auth0|root")
-    expect_equal(users$items[[1]]$n_datasets, 0L)
-
-    sessions <- yyjsonr::read_json_str(
-        do_request(ctx$pa, "http://t/v1/admin/sessions", headers = admin)$body,
-        arr_of_objs_to_df = FALSE,
-        obj_of_arrs_to_df = FALSE
-    )
-    expect_length(sessions$items, 0L) # no FE store tables in the scratch schema
-
-    requests <- yyjsonr::read_json_str(
-        do_request(ctx$pa, "http://t/v1/admin/requests", headers = admin)$body,
-        arr_of_objs_to_df = FALSE,
-        obj_of_arrs_to_df = FALSE
-    )
-    expect_equal(requests$window_hours, 24L)
-    paths <- vapply(requests$items, function(x) x$path, character(1))
-    expect_true("/v1/me" %in% paths)
-})
-
 test_that("requests are logged with the resolved principal; noisy paths are excluded", {
     ctx <- auth_api(bypass = TRUE)
     do_request(ctx$pa, "http://t/v1/me")

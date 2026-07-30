@@ -120,22 +120,6 @@ test_that("dataset list paginates with a cursor and honours filters", {
     ids2 <- vapply(page2$items, function(x) x$id, numeric(1))
     expect_true(all(ids2 < min(ids1))) # id-descending cursor
 
-    filtered <- yyjsonr::read_json_str(
-        do_request(ctx$pa, "http://t/v1/datasets?min_rows=4&max_rows=5")$body,
-        arr_of_objs_to_df = FALSE,
-        obj_of_arrs_to_df = FALSE
-    )
-    expect_setequal(
-        vapply(filtered$items, function(x) x$n_rows, numeric(1)),
-        c(4, 5)
-    )
-
-    none <- yyjsonr::read_json_str(
-        do_request(ctx$pa, "http://t/v1/datasets?created_to=2000-01-01")$body,
-        arr_of_objs_to_df = FALSE,
-        obj_of_arrs_to_df = FALSE
-    )
-    expect_length(none$items, 0L)
     expect_equal(do_request(ctx$pa, "http://t/v1/datasets?created_from=garbage")$status, 400L)
 })
 

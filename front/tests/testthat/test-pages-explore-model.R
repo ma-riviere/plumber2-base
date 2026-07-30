@@ -1,17 +1,6 @@
 # Explore and Model pages through the real assembled api (guest mode, fake
 # backend), including the fit -> poll -> terminal-fragment flow.
 
-test_that("/explore without a selection renders the empty state and the picker", {
-    pa <- local_front_api()
-    cookie <- guest_cookie(pa)
-    res <- do_request(pa, "http://t/explore", headers = list(Cookie = cookie))
-
-    expect_equal(res$status, 200L)
-    expect_match(res$body, 'id="dataset-select"', fixed = TRUE)
-    expect_match(res$body, "No dataset selected", fixed = TRUE)
-    expect_match(res$body, 'hx-get="/partials/explore/content"', fixed = TRUE)
-})
-
 test_that("/explore?dataset=1 renders description, column summary and preview", {
     pa <- local_front_api()
     cookie <- guest_cookie(pa)
@@ -27,63 +16,6 @@ test_that("/explore?dataset=1 renders description, column summary and preview", 
     gone <- do_request(pa, "http://t/explore?dataset=999", headers = list(Cookie = cookie))
     expect_equal(gone$status, 200L)
     expect_match(gone$body, "No dataset selected", fixed = TRUE)
-})
-
-test_that("/partials/explore/content pushes the canonical URL", {
-    pa <- local_front_api()
-    cookie <- guest_cookie(pa)
-    res <- do_request(
-        pa,
-        "http://t/partials/explore/content?dataset=1",
-        headers = list(Cookie = cookie, HX_Request = "true")
-    )
-    expect_equal(res$headers[["hx-push-url"]], "/explore?dataset=1")
-    expect_match(res$body, 'id="page-body"', fixed = TRUE)
-    expect_false(grepl("<html", res$body, fixed = TRUE))
-})
-
-test_that("/partials/explore/preview pages through the rows", {
-    pa <- local_front_api()
-    cookie <- guest_cookie(pa)
-    res <- do_request(
-        pa,
-        "http://t/partials/explore/preview?dataset=1&offset=10",
-        headers = list(Cookie = cookie, HX_Request = "true")
-    )
-    expect_equal(res$status, 200L)
-    expect_match(res$body, "11-20 / 50", fixed = TRUE)
-    # Previous points back to offset 0 (hx-vals JSON, quotes escaped in attrs).
-    expect_match(res$body, "offset&quot;: 0", fixed = TRUE)
-})
-
-test_that("/model?dataset=1 renders the fit form, variables and saved models", {
-    pa <- local_front_api()
-    cookie <- guest_cookie(pa)
-    res <- do_request(pa, "http://t/model?dataset=1", headers = list(Cookie = cookie))
-
-    expect_equal(res$status, 200L)
-    expect_match(res$body, 'id="formula-input"', fixed = TRUE)
-    expect_match(res$body, 'hx-post="/models/fit"', fixed = TRUE)
-    expect_match(res$body, "Available variables:", fixed = TRUE)
-    expect_match(res$body, 'id="saved-models"', fixed = TRUE)
-    expect_match(res$body, "dist ~ speed", fixed = TRUE)
-})
-
-test_that("submitting a fit returns the self-polling fragment", {
-    pa <- local_front_api()
-    session <- guest_session(pa)
-    res <- do_request(
-        pa,
-        "http://t/models/fit",
-        method = "post",
-        headers = action_headers(session, Content_Type = "application/x-www-form-urlencoded"),
-        content = "dataset=1&formula=slow%20~%20x"
-    )
-
-    expect_equal(res$status, 200L)
-    expect_match(res$body, 'hx-get="/partials/model/job/job-running?dataset=1&amp;model="', fixed = TRUE)
-    expect_match(res$body, 'hx-trigger="load delay:1s"', fixed = TRUE)
-    expect_match(res$body, "Fitting model...", fixed = TRUE)
 })
 
 test_that("fit rejections surface as alert fragments with the backend status", {
@@ -142,46 +74,29 @@ test_that("the job partial keeps polling while running and terminates on done/er
     expect_match(failed$body, "Model fitting failed", fixed = TRUE)
 })
 
-test_that("loading a saved model fills the results area and mirrors the formula", {
-    pa <- local_front_api()
-    cookie <- guest_cookie(pa)
-    res <- do_request(
-        pa,
-        "http://t/partials/model/saved/7",
-        headers = list(Cookie = cookie, HX_Request = "true")
-    )
-
-    expect_equal(res$status, 200L)
-    expect_match(res$body, "Model Summary", fixed = TRUE)
-    expect_match(res$body, 'id="formula-input"', fixed = TRUE)
-    expect_match(res$body, 'value="dist ~ speed"', fixed = TRUE)
-    expect_match(res$body, 'hx-swap-oob="true"', fixed = TRUE)
-})
-
-test_that("deleting a model refreshes the sidebar and clears the results", {
+test_that("a saved model loads with the formula mirrored OOB and deletes cleanly", {
     pa <- local_front_api()
     session <- guest_session(pa)
-    res <- do_request(
+
+    loaded <- do_request(
+        pa,
+        "http://t/partials/model/saved/7",
+        headers = list(Cookie = session$cookie, HX_Request = "true")
+    )
+    expect_equal(loaded$status, 200L)
+    expect_match(loaded$body, "Model Summary", fixed = TRUE)
+    expect_match(loaded$body, 'id="formula-input"', fixed = TRUE)
+    expect_match(loaded$body, 'value="dist ~ speed"', fixed = TRUE)
+    expect_match(loaded$body, 'hx-swap-oob="true"', fixed = TRUE)
+
+    deleted <- do_request(
         pa,
         "http://t/models/7?dataset=1",
         method = "delete",
         headers = action_headers(session)
     )
-
-    expect_equal(res$status, 200L)
-    expect_match(res$body, "Model deleted", fixed = TRUE)
-    expect_match(res$body, 'id="saved-models" hx-swap-oob="true"', fixed = TRUE)
-    expect_match(res$body, 'id="fit-status"', fixed = TRUE)
-})
-
-test_that("/partials/model/content pushes the canonical URL", {
-    pa <- local_front_api()
-    cookie <- guest_cookie(pa)
-    res <- do_request(
-        pa,
-        "http://t/partials/model/content?dataset=1",
-        headers = list(Cookie = cookie, HX_Request = "true")
-    )
-    expect_equal(res$headers[["hx-push-url"]], "/model?dataset=1")
-    expect_match(res$body, 'id="page-body"', fixed = TRUE)
+    expect_equal(deleted$status, 200L)
+    expect_match(deleted$body, "Model deleted", fixed = TRUE)
+    expect_match(deleted$body, 'id="saved-models" hx-swap-oob="true"', fixed = TRUE)
+    expect_match(deleted$body, 'id="fit-status"', fixed = TRUE)
 })

@@ -84,9 +84,8 @@ test_that("fit_model_task fits, reports metrics and butchers the model", {
 
 test_that("fit_model_task reports failures as plain data", {
     f <- validate_formula("mpg ~ wt", c("mpg", "wt"))
-    result <- fit_model_task(data.frame(mpg = 1, wt = 2), f) # 1 row: lm cannot fit
     # lm() with 1 observation fits with NA coefficients rather than erroring;
-    # use an empty frame to force a hard error.
+    # an empty frame forces a hard error.
     result <- fit_model_task(data.frame(mpg = numeric(), wt = numeric()), f)
     expect_false(result$success)
     expect_true(nzchar(result$error))

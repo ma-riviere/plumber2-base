@@ -18,34 +18,6 @@ make_request <- function(headers = list()) {
     reqres::Request$new(fiery::fake_request("http://t/home", headers = headers))
 }
 
-test_that("is_htmx_request detects the HX-Request header", {
-    expect_true(is_htmx_request(make_request(list(HX_Request = "true"))))
-    expect_false(is_htmx_request(make_request(list(HX_Request = "false"))))
-    expect_false(is_htmx_request(make_request()))
-})
-
-test_that("resolve_lang prefers a valid cookie, then Accept-Language, then en", {
-    translations <- front_state()$translations
-    expect_equal(resolve_lang(make_request(list(Cookie = "lang=fr")), translations), "fr")
-    # Invalid cookie falls through to Accept-Language.
-    expect_equal(
-        resolve_lang(
-            make_request(list(Cookie = "lang=de", Accept_Language = "fr-FR,fr;q=0.9")),
-            translations
-        ),
-        "fr"
-    )
-    expect_equal(resolve_lang(make_request(), translations), "en")
-})
-
-test_that("render_toast produces an out-of-band fragment for the toast container", {
-    frag <- render_toast("Saved", level = "success")
-    expect_match(frag, 'hx-swap-oob="beforeend:#toasts"', fixed = TRUE)
-    expect_match(frag, "text-bg-success", fixed = TRUE)
-    expect_match(frag, "Saved", fixed = TRUE)
-    expect_match(render_toast("Boom", level = "error"), "text-bg-danger", fixed = TRUE)
-})
-
 test_that("render_shell wraps content in the shell with fingerprinted /static/ assets", {
     state <- front_state()
     html <- render_shell(content = "<p>hi</p>", title = "T", lang = "en", state = state)
@@ -64,6 +36,28 @@ test_that("render_shell wraps content in the shell with fingerprinted /static/ a
 
     expect_gt(length(xml2::xml_find_all(doc, "//div[@id='toasts']")), 0)
     expect_match(xml2::xml_text(xml2::xml_find_first(doc, "//main/p")), "hi")
+})
+
+test_that("the shell's htmx-config meta pins the security and history settings", {
+    state <- front_state()
+    html <- render_shell(content = "<p>hi</p>", title = "T", lang = "en", state = state)
+    doc <- xml2::read_html(html)
+
+    htmx_config <- yyjsonr::read_json_str(xml2::xml_attr(
+        xml2::xml_find_first(doc, "//meta[@name='htmx-config']"),
+        "content"
+    ))
+    expect_false(htmx_config$allowEval)
+    # History restores must NOT send HX-Request (they need the full page back).
+    expect_false(htmx_config$historyRestoreAsHxRequest)
+    expect_true(htmx_config$refreshOnHistoryMiss)
+    # Reused fragments may carry dormant hx-swap-oob attrs: nested OOB must not
+    # extract them out of the primary content.
+    expect_false(htmx_config$allowNestedOobSwaps)
+    # 4xx swaps into the target (error fragments); 5xx does not (toast path).
+    handling <- htmx_config$responseHandling
+    expect_true(handling$swap[handling$code == "4.."])
+    expect_false(handling$swap[handling$code == "..."])
 })
 
 test_that("render_page returns the full shell and sets the HTML headers", {

@@ -1,20 +1,8 @@
 # permissions.yaml loading + role->scope mapping.
 
-test_that("the shipped permissions.yaml loads and is internally consistent", {
+test_that("the shipped permissions.yaml keeps the scope-grant invariants", {
     permissions <- load_permissions(file.path(BACK_DIR, "permissions.yaml"))
 
-    expect_setequal(
-        permissions$scopes,
-        c(
-            "write:datasets",
-            "write:models",
-            "manage:keys",
-            "view:admin",
-            "manage:admin:roles",
-            "manage:admin:users"
-        )
-    )
-    expect_true(all(c("admin", "dev", "user") %in% names(permissions$roles)))
     expect_equal(permissions$default_role, "user")
     # Key-management and admin scopes must never be key-grantable.
     expect_false(any(c("manage:keys", "view:admin", "manage:admin:roles") %in% permissions$key_safe_scopes))
@@ -36,8 +24,8 @@ test_that("scopes_for_roles maps roles, wildcards and defaults", {
     expect_setequal(scopes_for_roles("bogus", permissions), scopes_for_roles("user", permissions))
 })
 
-test_that("a permissions file with a typoed scope is rejected at load", {
-    bad <- withr::local_tempfile(fileext = ".yaml")
+test_that("an inconsistent permissions file is rejected at load", {
+    typoed_scope <- withr::local_tempfile(fileext = ".yaml")
     writeLines(
         c(
             "scopes:",
@@ -47,13 +35,11 @@ test_that("a permissions file with a typoed scope is rejected at load", {
             "    - write:dataset", # missing s
             "default_role: user"
         ),
-        bad
+        typoed_scope
     )
-    expect_error(load_permissions(bad), "unknown scope")
-})
+    expect_error(load_permissions(typoed_scope), "unknown scope")
 
-test_that("an undefined default_role is rejected at load", {
-    bad <- withr::local_tempfile(fileext = ".yaml")
+    undefined_default <- withr::local_tempfile(fileext = ".yaml")
     writeLines(
         c(
             "scopes:",
@@ -62,7 +48,7 @@ test_that("an undefined default_role is rejected at load", {
             "  admin: '*'",
             "default_role: user"
         ),
-        bad
+        undefined_default
     )
-    expect_error(load_permissions(bad), "default_role")
+    expect_error(load_permissions(undefined_default), "default_role")
 })

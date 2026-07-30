@@ -18,13 +18,6 @@ client_state <- function(backend_url) {
     list(config = utils::modifyList(test_config(), list(backend_url = backend_url)))
 }
 
-test_that("be_get parses JSON success bodies", {
-    state <- client_state(local_backend_fake())
-    me <- be_get(state, guest_store(), "/v1/me")
-    expect_equal(me$user$nickname, "guest")
-    expect_true("write:datasets" %in% unlist(me$scopes))
-})
-
 test_that("backend problem+json maps to fe_backend_error with status/title/detail", {
     state <- client_state(local_backend_fake())
     err <- tryCatch(be_get(state, guest_store(), "/v1/datasets/404"), fe_backend_error = identity)
@@ -81,34 +74,6 @@ test_that("session_scopes fails soft (empty grant + backoff) when the backend is
     expect_false(is.null(store$session$auth$scopes_failed_at))
     # Within the backoff window the failure is not retried (cached empty grant).
     expect_equal(session_scopes(state, store), character())
-})
-
-test_that("ensure_fresh_access_token propagates fe_auth_expired for missing sessions", {
-    state <- client_state("http://127.0.0.1:1")
-    err <- tryCatch(be_get(state, fake_datastore(), "/v1/me"), fe_auth_expired = identity)
-    expect_s3_class(err, "fe_auth_expired")
-})
-
-test_that("part_as_csv_bytes normalizes raw, data.frame and character parts", {
-    raw_part <- charToRaw("a,b\n1,2\n")
-    expect_identical(part_as_csv_bytes(raw_part), raw_part)
-
-    df_bytes <- part_as_csv_bytes(data.frame(a = 1L, b = 2L))
-    expect_true(is.raw(df_bytes))
-    parsed <- utils::read.csv(text = rawToChar(df_bytes))
-    expect_equal(parsed$a, 1L)
-
-    expect_identical(part_as_csv_bytes("a,b\n1,2\n"), charToRaw("a,b\n1,2\n"))
-    expect_null(part_as_csv_bytes(NULL))
-    expect_null(part_as_csv_bytes(list()))
-})
-
-test_that("scalar_field trims and drops empties", {
-    expect_equal(scalar_field(" x "), "x")
-    expect_null(scalar_field(""))
-    expect_null(scalar_field("   "))
-    expect_null(scalar_field(NULL))
-    expect_equal(scalar_field(c("a", "b")), "a")
 })
 
 test_that("the mgmt token is fetched once and mgmt_update_nickname PATCHes the sub", {

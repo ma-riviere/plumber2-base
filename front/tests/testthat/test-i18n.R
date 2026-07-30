@@ -15,14 +15,10 @@ fixture_translations <- function() {
     load_translations(path)
 }
 
-test_that("tr returns the requested language when the key exists", {
+test_that("tr resolves the requested language and falls back to en", {
     translations <- fixture_translations()
     expect_equal(tr("Home", "fr", translations), "Accueil")
     expect_equal(tr("Home", "en", translations), "Home")
-})
-
-test_that("tr falls back to en when the language is missing", {
-    translations <- fixture_translations()
     expect_equal(tr("Home", "de", translations), "Home")
 })
 

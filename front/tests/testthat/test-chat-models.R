@@ -37,22 +37,19 @@ chat_test_config <- function(...) {
     )
 }
 
-test_that("the first LOADED alias in configured order wins", {
+test_that("the first LOADED alias in configured order wins; unloaded aliases are skipped", {
     url <- local_router(list(
         list(id = "qwen3.6-27b", status = list(value = "loaded")),
         list(id = "ds4-flash", status = list(value = "loaded"))
     ))
     choice <- chat_choose_model(chat_test_config(llama_base_url = url))
     expect_equal(choice, list(provider = "llama.cpp", model = "ds4-flash"))
-})
 
-test_that("an alias the router has not loaded is skipped", {
-    url <- local_router(list(
+    partial <- local_router(list(
         list(id = "ds4-flash", status = list(value = "unloaded")),
         list(id = "qwen3.6-27b", status = list(value = "loaded"))
     ))
-    choice <- chat_choose_model(chat_test_config(llama_base_url = url))
-    expect_equal(choice$model, "qwen3.6-27b")
+    expect_equal(chat_choose_model(chat_test_config(llama_base_url = partial))$model, "qwen3.6-27b")
 })
 
 test_that("nothing loaded falls back to the remote provider", {
@@ -61,20 +58,18 @@ test_that("nothing loaded falls back to the remote provider", {
     expect_equal(choice, list(provider = "openrouter", model = "vendor/model-1"))
 })
 
-test_that("a router that is down or refuses the key falls back instead of failing", {
+test_that("a router that is down, unreachable or refuses the key falls back instead of failing", {
     down <- local_router(list(), status = 503L)
     expect_equal(chat_choose_model(chat_test_config(llama_base_url = down))$provider, "openrouter")
+
+    unreachable <- chat_test_config(llama_base_url = "http://127.0.0.1:1")
+    expect_equal(chat_choose_model(unreachable)$provider, "openrouter")
 
     guarded <- local_router(list(list(id = "ds4-flash", status = list(value = "loaded"))), expect_key = "right")
     config <- chat_test_config(llama_base_url = guarded, llama_api_key = "wrong")
     expect_equal(chat_choose_model(config)$provider, "openrouter")
     config$chat$llama_api_key <- "right"
     expect_equal(chat_choose_model(config)$model, "ds4-flash")
-})
-
-test_that("an unreachable router does not stall the caller", {
-    config <- chat_test_config(llama_base_url = "http://127.0.0.1:1")
-    expect_equal(chat_choose_model(config)$provider, "openrouter")
 })
 
 test_that("no loaded model and no fallback is a chat error, not a crash", {

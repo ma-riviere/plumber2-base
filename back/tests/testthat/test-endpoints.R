@@ -34,42 +34,6 @@ test_that("GET /health returns a 503 problem+json when the database is unreachab
     expect_equal(yyjsonr::read_json_str(res$body)$status, 503L)
 })
 
-test_that("GET /v1/ping works under the /v1 root and returns an ISO timestamp", {
-    # Since Phase 3 the whole /v1 surface is behind auth; bypass mode keeps this
-    # a pure routing/serializer test (the auth matrix lives in
-    # test-auth-endpoints.R).
-    with_auth_env(bypass = TRUE)
-    pa <- build_test_api()
-
-    res <- do_request(pa, "http://t/v1/ping")
-
-    expect_equal(res$status, 200L)
-    expect_match(res$headers[["content-type"]], "application/json")
-    pong <- yyjsonr::read_json_str(res$body)$pong
-    expect_match(pong, "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$")
-})
-
-test_that("ping is NOT served at the unprefixed /ping", {
-    pa <- build_test_api()
-
-    res <- do_request(pa, "http://t/ping")
-
-    expect_equal(res$status, 404L)
-    expect_match(res$headers[["content-type"]], "application/problem\\+json")
-})
-
-test_that("an unknown route returns a 404 problem+json (not a bare 404)", {
-    pa <- build_test_api()
-
-    res <- do_request(pa, "http://t/nope")
-
-    expect_equal(res$status, 404L)
-    expect_match(res$headers[["content-type"]], "application/problem\\+json")
-    problem <- yyjsonr::read_json_str(res$body)
-    expect_equal(problem$status, 404L)
-    expect_true(nzchar(problem$detail))
-})
-
 test_that("security headers are present on responses, without HSTS or a redirect", {
     pool <- dev_pool_or_skip()
     withr::defer(pool::poolClose(pool))

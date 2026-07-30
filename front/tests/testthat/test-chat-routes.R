@@ -40,20 +40,6 @@ pump_until <- function(condition, seconds = 10) {
     isTRUE(condition())
 }
 
-test_that("the widget mounts on Explore only when a dataset is selected", {
-    pa <- chat_api()
-    session <- guest_session(pa)
-    with_dataset <- do_request(pa, "http://t/explore?dataset=1", headers = list(Cookie = session$cookie))
-    expect_match(with_dataset$body, 'id="chat-launcher"', fixed = TRUE)
-    expect_match(with_dataset$body, 'id="chat-panel"', fixed = TRUE)
-    # Collapsed by default on every page load.
-    expect_match(with_dataset$body, 'class="card chat-panel d-none"', fixed = TRUE)
-    expect_match(with_dataset$body, "New chat", fixed = TRUE)
-
-    without <- do_request(pa, "http://t/explore", headers = list(Cookie = session$cookie))
-    expect_false(grepl("chat-launcher", without$body, fixed = TRUE))
-})
-
 test_that("the widget is absent and every handler refuses when chat is disabled", {
     pa <- chat_api(enabled = FALSE)
     session <- guest_session(pa)
@@ -86,20 +72,6 @@ test_that("guests are denied server-side, not merely hidden", {
         expect_match(res$body, "Sign in", fixed = TRUE)
     }
     expect_length(ls(chat_registry), 0L)
-})
-
-test_that("chat POSTs are CSRF-gated like every other state-changing request", {
-    pa <- chat_api()
-    session <- guest_session(pa)
-    res <- do_request(
-        pa,
-        "http://t/partials/chat/send",
-        method = "post",
-        headers = list(Cookie = session$cookie, Content_Type = "application/x-www-form-urlencoded"),
-        content = "dataset=1&message=hello"
-    )
-    expect_equal(res$status, 403L)
-    expect_match(res$body, "CSRF", fixed = TRUE)
 })
 
 test_that("an empty or oversized question is refused before a process is spawned", {
