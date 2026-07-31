@@ -91,7 +91,7 @@ function(request, response, server, datastore, body) {
             paste0(
                 chat_stream_html(session, dataset_id, lang, translations),
                 chat_form_html(dataset_id, lang, translations, oob = TRUE),
-                chat_model_info_html(session, lang, translations, oob = TRUE),
+                chat_model_info_html(session, dataset_id, lang, translations, oob = TRUE),
                 chat_privacy_html(session, lang, translations, oob = TRUE)
             )
         })
@@ -128,6 +128,36 @@ function(request, response, server, datastore, query) {
     })
 }
 
+#* Refresh the header's model indicator (self-replacing) and the privacy note
+#* (OOB). The indicator polls this every 30s so a router that disappeared or
+#* came back changes the tooltip and the locality wording without a page
+#* reload. Resolution matches the page render (chat_display_session: live
+#* session first, else the cached prospective choice) and deliberately does
+#* NOT touch the session's poll clock - a model poll must never keep an idle
+#* chat alive.
+#* @query dataset The dataset id the widget is mounted for (untyped: htmx may send it empty)
+#* @get /partials/chat/model
+#* @serializer html
+function(request, response, server, datastore, query) {
+    state <- server$get_data("state")
+    lang <- resolve_lang(request, state$translations)
+    dataset_id <- suppressWarnings(as.integer(query$dataset %||% NA))
+    with_fe_errors(request, response, state, datastore, {
+        denial <- chat_denial(state, datastore)
+        if (!is.null(denial) || is.na(dataset_id)) {
+            response$status <- 204L
+            set_html_headers(response)
+            return("")
+        }
+        session <- chat_display_session(state, datastore, dataset_id)
+        set_html_headers(response)
+        paste0(
+            chat_model_info_html(session, dataset_id, lang, state$translations),
+            chat_privacy_html(session, lang, state$translations, oob = TRUE)
+        )
+    })
+}
+
 #* Start a new chat: full cleanup ladder (abort, kill, workdir removal), the
 #* persisted store for this (user, dataset) forgotten - pi session files and
 #* transcript sidecar both - and an empty transcript. The next question starts
@@ -155,7 +185,13 @@ function(request, response, server, datastore, body) {
         paste0(
             chat_stream_html(NULL, dataset_id, lang, state$translations),
             chat_form_html(dataset_id, lang, state$translations, oob = TRUE),
-            chat_model_info_html(chat_prospective_model(state$config), lang, state$translations, oob = TRUE),
+            chat_model_info_html(
+                chat_prospective_model(state$config),
+                dataset_id,
+                lang,
+                state$translations,
+                oob = TRUE
+            ),
             chat_privacy_html(chat_prospective_model(state$config), lang, state$translations, oob = TRUE)
         )
     })

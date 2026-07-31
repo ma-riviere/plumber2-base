@@ -75,6 +75,22 @@ test_that("guests are denied server-side, not merely hidden", {
     expect_length(ls(chat_registry), 0L)
 })
 
+test_that("the model indicator poll answers the current choice and re-states the privacy note OOB", {
+    pa <- chat_api()
+    session <- guest_session(pa)
+    res <- do_request(pa, "http://t/partials/chat/model?dataset=1", headers = list(Cookie = session$cookie))
+    expect_equal(res$status, 200L)
+    expect_match(res$body, 'id="chat-model-info"', fixed = TRUE)
+    expect_match(res$body, "[stub] stub-model", fixed = TRUE)
+    expect_match(res$body, 'hx-trigger="every 30s"', fixed = TRUE)
+    expect_match(res$body, 'id="chat-privacy"', fixed = TRUE)
+    expect_match(res$body, "hx-swap-oob", fixed = TRUE)
+
+    # No dataset to resolve against: nothing to repaint, and htmx must not swap.
+    missing <- do_request(pa, "http://t/partials/chat/model?dataset=", headers = list(Cookie = session$cookie))
+    expect_equal(missing$status, 204L)
+})
+
 test_that("an empty or oversized question is refused before a process is spawned", {
     pa <- chat_api()
     session <- guest_session(pa)

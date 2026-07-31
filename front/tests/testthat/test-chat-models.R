@@ -43,7 +43,7 @@ test_that("the first LOADED alias in configured order wins; unloaded aliases are
         list(id = "large", status = list(value = "loaded"))
     ))
     choice <- chat_choose_model(chat_test_config(llama_base_url = url))
-    expect_equal(choice, list(provider = "llama.cpp", model = "large"))
+    expect_equal(choice, list(provider = "llama.cpp", model = "large", display_model = "large"))
 
     partial <- local_router(list(
         list(id = "large", status = list(value = "unloaded")),
@@ -52,10 +52,23 @@ test_that("the first LOADED alias in configured order wins; unloaded aliases are
     expect_equal(chat_choose_model(chat_test_config(llama_base_url = partial))$model, "small")
 })
 
+test_that("the router's first tag becomes the display name; the wire model stays the alias", {
+    url <- local_router(list(
+        list(id = "large", status = list(value = "loaded"), tags = list("DeepSeek-V4-Flash-0731")),
+        list(id = "small", status = list(value = "loaded"), tags = list())
+    ))
+    choice <- chat_choose_model(chat_test_config(llama_base_url = url))
+    expect_equal(choice$model, "large")
+    expect_equal(choice$display_model, "DeepSeek-V4-Flash-0731")
+
+    untagged <- chat_choose_model(chat_test_config(llama_base_url = url, llama_models = c("small")))
+    expect_equal(untagged$display_model, "small")
+})
+
 test_that("nothing loaded falls back to the remote provider", {
     url <- local_router(list(list(id = "large", status = list(value = "unloaded"))))
     choice <- chat_choose_model(chat_test_config(llama_base_url = url))
-    expect_equal(choice, list(provider = "openrouter", model = "vendor/model-1"))
+    expect_equal(choice, list(provider = "openrouter", model = "vendor/model-1", display_model = "vendor/model-1"))
 })
 
 test_that("a router that is down, unreachable or refuses the key falls back instead of failing", {

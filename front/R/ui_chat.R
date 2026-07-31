@@ -34,7 +34,7 @@ chat_widget_html <- function(session, dataset_id, lang, translations) {
                 htmltools::div(
                     class = "d-flex align-items-center gap-1",
                     htmltools::tags$span(class = "fw-semibold", tr("Dataset assistant", lang, translations)),
-                    htmltools::HTML(chat_model_info_html(session, lang, translations))
+                    htmltools::HTML(chat_model_info_html(session, dataset_id, lang, translations))
                 ),
                 htmltools::div(
                     class = "d-flex align-items-center gap-2",
@@ -149,22 +149,30 @@ chat_form_html <- function(dataset_id, lang, translations, oob = FALSE) {
 
 # The header's model indicator: an info icon whose hover title carries
 # "[provider] model" ("[local]" for the platform router: llama.cpp or vllm).
-# Always the model the NEXT send will use (resolved by chat_display_session):
-# the live session's model when one is bound to the dataset, otherwise the
-# cached prospective choice - never the model persisted with restored answers,
-# which may no longer be available. The send and reset responses re-state it
-# OOB (actual and prospective respectively).
-chat_model_info_html <- function(session, lang, translations, oob = FALSE) {
+# The model shown is the DISPLAY name (the checkpoint name the router publishes
+# as a tag), not the functional alias the wire carries. Always the model the
+# NEXT send will use (resolved by chat_display_session): the live session's
+# model when one is bound to the dataset, otherwise the cached prospective
+# choice - never the model persisted with restored answers, which may no
+# longer be available. The send and reset responses re-state it OOB (actual
+# and prospective respectively), and the span re-fetches itself every 30s
+# (with the privacy note OOB) so a router that went away or came back is
+# reflected without a page reload.
+chat_model_info_html <- function(session, dataset_id, lang, translations, oob = FALSE) {
     provider <- session$provider %||% ""
-    model <- session$model %||% ""
+    model <- session$display_model %||% session$model %||% ""
     if (provider %in% c("llama.cpp", "vllm")) {
         provider <- "local"
     }
     label <- sprintf("[%s] %s", provider, model)
+    dataset_id <- suppressWarnings(as.integer(dataset_id %||% NA))
     render_tags(htmltools::tags$span(
         id = "chat-model-info",
         class = "chat-model-info text-muted",
         `hx-swap-oob` = if (oob) "outerHTML",
+        `hx-get` = if (!is.na(dataset_id)) sprintf("/partials/chat/model?dataset=%d", dataset_id),
+        `hx-trigger` = if (!is.na(dataset_id)) "every 30s",
+        `hx-swap` = if (!is.na(dataset_id)) "outerHTML",
         if (nzchar(provider) && nzchar(model)) {
             htmltools::tags$span(
                 title = label,

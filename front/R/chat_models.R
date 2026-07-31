@@ -30,22 +30,31 @@ chat_prospective_model <- function(config) {
     choice
 }
 
+# `model` is what the wire carries (the router routes on aliases); `display_model`
+# is what the tooltip shows: the checkpoint name the router publishes as its
+# first `tags` entry (deploy-llm derives it from the HF repo), else the alias.
 chat_choose_model <- function(config) {
     chat <- config$chat
     loaded <- chat_router_loaded(chat)
     for (alias in chat$llama_models) {
-        if (alias %in% loaded) {
-            return(list(provider = chat$llama_provider, model = alias))
+        if (alias %in% names(loaded)) {
+            return(list(provider = chat$llama_provider, model = alias, display_model = loaded[[alias]]))
         }
     }
     if (nzchar(chat$fallback_provider) && nzchar(chat$fallback_model)) {
-        return(list(provider = chat$fallback_provider, model = chat$fallback_model))
+        return(list(
+            provider = chat$fallback_provider,
+            model = chat$fallback_model,
+            display_model = chat$fallback_model
+        ))
     }
     stop(chat_error("No chat model is available right now"))
 }
 
-# Model ids the router reports as loaded. An unreachable or malformed router is
-# not an error here - it just means "nothing loaded", and the fallback applies.
+# The models the router reports as loaded, as a named character vector:
+# names are the routable ids (aliases), values the display names (first tag,
+# falling back to the id). An unreachable or malformed router is not an error
+# here - it just means "nothing loaded", and the fallback applies.
 chat_router_loaded <- function(chat) {
     if (!nzchar(chat$llama_base_url) || length(chat$llama_models) == 0L) {
         return(character())
@@ -70,13 +79,20 @@ chat_router_loaded <- function(chat) {
     if (!is.list(entries)) {
         return(character())
     }
-    ids <- vapply(
+    info <- vapply(
         entries,
         function(entry) {
             status <- be_scalar(entry$status$value) %||% be_scalar(entry$status) %||% ""
-            if (identical(as.character(status), "loaded")) as.character(be_scalar(entry$id) %||% "") else ""
+            if (!identical(as.character(status), "loaded")) {
+                return(c("", ""))
+            }
+            id <- as.character(be_scalar(entry$id) %||% "")
+            tags <- entry$tags %||% list()
+            display <- if (length(tags) > 0L) as.character(be_scalar(tags[[1]]) %||% "") else ""
+            c(id, if (nzchar(display)) display else id)
         },
-        character(1)
+        character(2)
     )
-    ids[nzchar(ids)]
+    keep <- nzchar(info[1, ])
+    stats::setNames(info[2, keep], info[1, keep])
 }

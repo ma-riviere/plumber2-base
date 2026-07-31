@@ -266,6 +266,7 @@ chat_display_session <- function(state, datastore, dataset_id) {
         choice <- chat_prospective_model(state$config)
         restored$provider <- choice$provider
         restored$model <- choice$model
+        restored$display_model <- choice$display_model
     }
     restored
 }
@@ -488,6 +489,7 @@ chat_create <- function(state, datastore, key, user_id, dataset_id, lang, detail
     choice <- chat_choose_model(state$config)
     session$provider <- choice$provider
     session$model <- choice$model
+    session$display_model <- choice$display_model %||% choice$model
     chat_spawn(session, state)
     session$status <- "awaiting_model"
     chat_write_command(session, list(type = "set_auto_retry", enabled = TRUE))
