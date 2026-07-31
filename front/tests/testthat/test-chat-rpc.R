@@ -171,9 +171,10 @@ test_that("responses are correlated by command id and a failed set_model is term
     expect_equal(session$last_command$message, "question")
 })
 
-test_that("a failed set_model response ends the session with a model error", {
+test_that("a failed set_model response ends the session once retries are exhausted", {
     session <- chat_new_state("k1", 1L, 7L, "en")
     session$status <- "awaiting_model"
+    session$model_retries_left <- 0L
     id <- chat_next_command_id(session, "set_model")
     chat_feed_stdout(
         session,
@@ -182,6 +183,42 @@ test_that("a failed set_model response ends the session with a model error", {
     expect_equal(session$status, "error")
     expect_equal(session$error, "No chat model is available right now")
     expect_true(session$needs_cleanup)
+})
+
+test_that("a transiently failed set_model is re-sent by the supervisor before failing", {
+    session <- chat_new_state("k1", 1L, 7L, "en")
+    session$status <- "awaiting_model"
+    session$provider <- "llama.cpp"
+    session$model <- "qwen3.6-27b"
+    session$model_retries_left <- 1L
+    id <- chat_next_command_id(session, "set_model")
+
+    # pi's cold-start "Model not found": the session survives, a retry is due.
+    chat_feed_stdout(
+        session,
+        sprintf('{"type":"response","id":"%s","command":"set_model","success":false,"error":"nope"}\n', id)
+    )
+    expect_equal(session$status, "awaiting_model")
+    expect_false(is.na(session$model_retry_at))
+
+    # Before the delay elapses nothing is re-sent.
+    chat_retry_set_model(session, session$model_retry_at - 0.1)
+    expect_null(session$last_command)
+
+    # Once due, the same provider/model pair goes out again under a fresh id.
+    chat_retry_set_model(session, session$model_retry_at + 0.1)
+    expect_true(is.na(session$model_retry_at))
+    expect_equal(session$last_command$type, "set_model")
+    expect_equal(session$last_command$modelId, "qwen3.6-27b")
+
+    # A second failure exhausts the budget and is terminal.
+    retry_id <- session$last_command$id
+    chat_feed_stdout(
+        session,
+        sprintf('{"type":"response","id":"%s","command":"set_model","success":false,"error":"nope"}\n', retry_id)
+    )
+    expect_equal(session$status, "error")
+    expect_equal(session$error, "No chat model is available right now")
 })
 
 test_that("malformed JSON is a protocol failure, not a skipped line", {

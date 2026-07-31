@@ -14,6 +14,8 @@ CHAT_TURN_TIMEOUT_SECONDS <- 120
 CHAT_ABORT_GRACE_SECONDS <- 10
 CHAT_IDLE_SECONDS <- 600
 CHAT_KILL_GRACE_MS <- 300
+CHAT_MODEL_RETRIES <- 8L
+CHAT_MODEL_RETRY_SECONDS <- 1
 
 # Environment variables the subprocess may inherit. Everything else (Auth0
 # client secret, SESSION_KEY, PG*, ...) is dropped: processx replaces the whole
@@ -450,6 +452,16 @@ chat_write_command <- function(session, command) {
 
 # --- session creation ----------------------------------------------------------
 
+# pi discovers llama.cpp router models through an async catalog fetch, and every
+# session starts on a cold pi state dir (fresh PI_CODING_AGENT_DIR), so a
+# set_model sent right after spawn can race the fetch and fail with "Model not
+# found" even though the alias is loaded. That failure is transient: it is
+# retried on the supervisor tick (chat_retry_set_model) until the budget runs
+# out; only exhaustion is terminal.
+chat_send_set_model <- function(session) {
+    chat_write_command(session, list(type = "set_model", provider = session$provider, modelId = session$model))
+}
+
 # Create the chat session for this browser session and dataset: workdir, pi
 # subprocess, auto-retry ON (transient provider errors - e.g. NVIDIA free-tier
 # ResourceExhausted - are retried by pi inside the turn; the 120s deadline stays
@@ -472,7 +484,7 @@ chat_create <- function(state, datastore, key, user_id, dataset_id, lang, detail
     chat_spawn(session, state)
     session$status <- "awaiting_model"
     chat_write_command(session, list(type = "set_auto_retry", enabled = TRUE))
-    chat_write_command(session, list(type = "set_model", provider = choice$provider, modelId = choice$model))
+    chat_send_set_model(session)
     chat_registry[[key]] <- session
     chat_supervisor_start()
     session

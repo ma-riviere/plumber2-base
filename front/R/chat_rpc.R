@@ -79,6 +79,8 @@ chat_new_state <- function(key, dataset_id, user_id, lang) {
     session$error <- NULL
     session$aborting <- FALSE
     session$needs_cleanup <- FALSE
+    session$model_retries_left <- CHAT_MODEL_RETRIES
+    session$model_retry_at <- NA_real_
     now <- as.numeric(Sys.time())
     session$created_at <- now
     session$last_poll_at <- now
@@ -189,8 +191,16 @@ chat_apply_response <- function(session, event) {
     success <- isTRUE(be_scalar(event$success))
     if (identical(command, "set_model")) {
         if (!success) {
+            # Transient on a cold pi state dir (see chat_send_set_model):
+            # schedule a re-send instead of failing, until the budget runs out.
+            if (session$model_retries_left > 0L) {
+                session$model_retries_left <- session$model_retries_left - 1L
+                session$model_retry_at <- as.numeric(Sys.time()) + CHAT_MODEL_RETRY_SECONDS
+                return(invisible(session))
+            }
             return(invisible(chat_fail(session, "No chat model is available right now")))
         }
+        session$model_retry_at <- NA_real_
         session$status <- "idle"
         if (!is.null(session$queued_prompt)) {
             prompt <- session$queued_prompt

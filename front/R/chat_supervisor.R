@@ -37,6 +37,7 @@ chat_tick <- function(now = as.numeric(Sys.time())) {
             next
         }
         chat_drain(session)
+        chat_retry_set_model(session, now)
         chat_enforce_deadlines(session, now)
         if (isTRUE(session$needs_cleanup)) {
             chat_cleanup(session)
@@ -87,6 +88,17 @@ chat_read_stream <- function(process, which) {
         },
         error = function(e) ""
     )
+}
+
+# Re-send a set_model whose transient failure scheduled a retry (see
+# chat_send_set_model in R/chat_session.R).
+chat_retry_set_model <- function(session, now) {
+    if (!identical(session$status, "awaiting_model") || is.na(session$model_retry_at) || now < session$model_retry_at) {
+        return(invisible(session))
+    }
+    session$model_retry_at <- NA_real_
+    chat_send_set_model(session)
+    invisible(session)
 }
 
 # Per-turn walltime: RPC abort first (pi can still emit agent_settled, which
