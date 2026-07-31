@@ -793,8 +793,12 @@
             "fr": "Envoyer (Ctrl+Entrée)"
         },
         {
-            "en": "Your question and values from this dataset are sent to a remote model provider.",
-            "fr": "Votre question et des valeurs de ce jeu de données sont transmises à un fournisseur de modèle distant."
+            "en": "Your question and dataset values go to an external provider.",
+            "fr": "Vos questions et données sont envoyées à un fournisseur externe."
+        },
+        {
+            "en": "100% private: your data stays on our own server.",
+            "fr": "100% privé : vos données restent sur notre propre serveur."
         },
         {
             "en": "Thinking",

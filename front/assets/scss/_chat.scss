@@ -166,7 +166,12 @@
 }
 
 .chat-privacy {
+    // Sized so both variants (EN and FR) stay on one line in the 24rem panel.
+    font-size: 0.72rem;
     line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .chat-model-info [title] {

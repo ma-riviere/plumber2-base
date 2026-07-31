@@ -91,7 +91,8 @@ function(request, response, server, datastore, body) {
             paste0(
                 chat_stream_html(session, dataset_id, lang, translations),
                 chat_form_html(dataset_id, lang, translations, oob = TRUE),
-                chat_model_info_html(session, lang, translations, oob = TRUE)
+                chat_model_info_html(session, lang, translations, oob = TRUE),
+                chat_privacy_html(session, lang, translations, oob = TRUE)
             )
         })
     })
@@ -154,7 +155,8 @@ function(request, response, server, datastore, body) {
         paste0(
             chat_stream_html(NULL, dataset_id, lang, state$translations),
             chat_form_html(dataset_id, lang, state$translations, oob = TRUE),
-            chat_model_info_html(chat_prospective_model(state$config), lang, state$translations, oob = TRUE)
+            chat_model_info_html(chat_prospective_model(state$config), lang, state$translations, oob = TRUE),
+            chat_privacy_html(chat_prospective_model(state$config), lang, state$translations, oob = TRUE)
         )
     })
 }

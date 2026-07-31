@@ -66,14 +66,7 @@ chat_widget_html <- function(session, dataset_id, lang, translations) {
             htmltools::div(
                 class = "card-footer",
                 htmltools::HTML(chat_form_html(dataset_id, lang, translations)),
-                htmltools::p(
-                    class = "chat-privacy text-muted small mb-0 mt-2",
-                    tr(
-                        "Your question and values from this dataset are sent to a remote model provider.",
-                        lang,
-                        translations
-                    )
-                )
+                htmltools::HTML(chat_privacy_html(session, lang, translations))
             )
         )
     )
@@ -178,6 +171,26 @@ chat_model_info_html <- function(session, lang, translations, oob = FALSE) {
                 bs_icon("info-circle")
             )
         }
+    ))
+}
+
+# The footer's privacy note, resolved from the same session (or prospective
+# choice) as the model icon and re-stated OOB alongside it: green when the
+# model is the platform's own router (data never leaves our servers), orange
+# for an external provider. An unknown provider gets the external wording
+# (never promise privacy that is not established).
+chat_privacy_html <- function(session, lang, translations, oob = FALSE) {
+    is_local <- (session$provider %||% "") %in% c("llama.cpp", "vllm")
+    message <- if (is_local) {
+        "100% private: your data stays on our own server."
+    } else {
+        "Your question and dataset values go to an external provider."
+    }
+    render_tags(htmltools::p(
+        id = "chat-privacy",
+        class = paste("chat-privacy mb-0 mt-2", if (is_local) "text-success" else "text-warning"),
+        `hx-swap-oob` = if (oob) "outerHTML",
+        tr(message, lang, translations)
     ))
 }
 
