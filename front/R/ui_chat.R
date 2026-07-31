@@ -149,10 +149,11 @@ chat_form_html <- function(dataset_id, lang, translations, oob = FALSE) {
 
 # The header's model indicator: an info icon whose hover title carries
 # "[provider] model" ("[local]" for the platform router: llama.cpp or vllm).
-# Precedence (resolved by chat_display_session): live session's actual model >
-# model persisted with the last restored answer > cached prospective choice, so
-# the icon is present as soon as the widget renders. The send and reset
-# responses re-state it OOB (actual and prospective respectively).
+# Always the model the NEXT send will use (resolved by chat_display_session):
+# the live session's model when one is bound to the dataset, otherwise the
+# cached prospective choice - never the model persisted with restored answers,
+# which may no longer be available. The send and reset responses re-state it
+# OOB (actual and prospective respectively).
 chat_model_info_html <- function(session, lang, translations, oob = FALSE) {
     provider <- session$provider %||% ""
     model <- session$model %||% ""
