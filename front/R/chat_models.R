@@ -10,6 +10,26 @@
 
 CHAT_MODELS_TIMEOUT_SECONDS <- 2
 
+# The choice the NEXT session would make, cached so the header's model tooltip
+# can render on every Explore load without re-probing the router each time
+# (2s worst case when the router is configured but unreachable). NULL results
+# are cached too, for the same reason. A session created within the TTL
+# re-runs the real choice; the tooltip is advisory.
+CHAT_CHOICE_TTL_SECONDS <- 60
+
+chat_choice_cache <- new.env(parent = emptyenv())
+
+chat_prospective_model <- function(config) {
+    now <- as.numeric(Sys.time())
+    if (!is.null(chat_choice_cache$at) && now - chat_choice_cache$at < CHAT_CHOICE_TTL_SECONDS) {
+        return(chat_choice_cache$choice)
+    }
+    choice <- tryCatch(chat_choose_model(config), error = function(e) NULL)
+    chat_choice_cache$at <- now
+    chat_choice_cache$choice <- choice
+    choice
+}
+
 chat_choose_model <- function(config) {
     chat <- config$chat
     loaded <- chat_router_loaded(chat)

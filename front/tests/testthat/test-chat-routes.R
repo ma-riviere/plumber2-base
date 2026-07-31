@@ -5,6 +5,7 @@
 # sessions and turn count leak into the next.
 local_clean_registry <- function(env = parent.frame()) {
     rm(list = ls(chat_quota_state), envir = chat_quota_state)
+    rm(list = ls(chat_choice_cache), envir = chat_choice_cache)
     withr::defer(
         {
             for (key in ls(chat_registry)) {
@@ -83,6 +84,13 @@ test_that("an empty or oversized question is refused before a process is spawned
     expect_equal(long$status, 422L)
     expect_match(long$body, "too long", fixed = TRUE)
     expect_length(ls(chat_registry), 0L)
+})
+
+test_that("the header shows the prospective model before any question is asked", {
+    pa <- chat_api()
+    session <- guest_session(pa)
+    page <- do_request(pa, "http://t/explore?dataset=1", headers = list(Cookie = session$cookie))
+    expect_match(page$body, 'title="[stub] stub-model"', fixed = TRUE)
 })
 
 test_that("a question spawns the agent, streams and settles into the transcript", {

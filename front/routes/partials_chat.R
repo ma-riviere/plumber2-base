@@ -154,7 +154,7 @@ function(request, response, server, datastore, body) {
         paste0(
             chat_stream_html(NULL, dataset_id, lang, state$translations),
             chat_form_html(dataset_id, lang, state$translations, oob = TRUE),
-            chat_model_info_html(NULL, lang, state$translations, oob = TRUE)
+            chat_model_info_html(chat_prospective_model(state$config), lang, state$translations, oob = TRUE)
         )
     })
 }

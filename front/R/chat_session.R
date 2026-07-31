@@ -257,16 +257,20 @@ chat_display_session <- function(state, datastore, dataset_id) {
         return(session)
     }
     messages <- chat_restore_transcript(state, datastore$session$auth$user_id, dataset_id)
-    if (is.null(messages)) {
-        return(NULL)
-    }
-    restored <- list(status = "restored", transcript = messages)
-    for (entry in rev(messages)) {
+    restored <- list(status = "restored", transcript = messages %||% list())
+    for (entry in rev(restored$transcript)) {
         if (identical(entry$role, "assistant") && nzchar(entry$model %||% "")) {
             restored$provider <- entry$provider
             restored$model <- entry$model
             break
         }
+    }
+    # No persisted answer to attribute: show what the next session would pick,
+    # so the header's tooltip is available before the first question too.
+    if (is.null(restored$model) && isTRUE(state$config$chat$enabled)) {
+        choice <- chat_prospective_model(state$config)
+        restored$provider <- choice$provider
+        restored$model <- choice$model
     }
     restored
 }

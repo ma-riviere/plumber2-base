@@ -40,12 +40,6 @@ chat_widget_html <- function(session, dataset_id, lang, translations) {
                     class = "d-flex align-items-center gap-2",
                     htmltools::tags$button(
                         type = "button",
-                        class = "btn-close",
-                        `data-chat-toggle` = "",
-                        `aria-label` = tr("Close", lang, translations)
-                    ),
-                    htmltools::tags$button(
-                        type = "button",
                         class = "btn btn-sm btn-outline-secondary text-nowrap",
                         `hx-post` = "/partials/chat/reset",
                         `hx-vals` = sprintf('{"dataset": %d}', as.integer(dataset_id)),
@@ -53,6 +47,15 @@ chat_widget_html <- function(session, dataset_id, lang, translations) {
                         `hx-swap` = "outerHTML",
                         `hx-sync` = "#chat-stream:replace",
                         tr("New chat", lang, translations)
+                    ),
+                    htmltools::tags$button(
+                        type = "button",
+                        class = "btn btn-sm btn-outline-secondary chat-minimize",
+                        `data-chat-toggle` = "",
+                        title = tr("Minimize", lang, translations),
+                        `aria-label` = tr("Minimize", lang, translations),
+                        `aria-controls` = "chat-panel",
+                        bs_icon("dash-lg")
                     )
                 )
             ),
@@ -153,11 +156,10 @@ chat_form_html <- function(dataset_id, lang, translations, oob = FALSE) {
 
 # The header's model indicator: an info icon whose hover title carries
 # "[provider] model" ("[local]" for the platform router: llama.cpp or vllm).
-# The model is only chosen when the pi session spawns (first
-# question), so a plain render may leave the span empty; the send and reset
-# responses re-state it OOB once the choice is made (or gone). Restored
-# transcripts show the model that produced the last persisted answer
-# (chat_display_session lifts it from the assistant entries).
+# Precedence (resolved by chat_display_session): live session's actual model >
+# model persisted with the last restored answer > cached prospective choice, so
+# the icon is present as soon as the widget renders. The send and reset
+# responses re-state it OOB (actual and prospective respectively).
 chat_model_info_html <- function(session, lang, translations, oob = FALSE) {
     provider <- session$provider %||% ""
     model <- session$model %||% ""
