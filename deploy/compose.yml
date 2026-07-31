@@ -90,10 +90,14 @@ services:
       BACKEND_URL: http://back:8081
       APP_URL: https://plumber2-base.ma-riviere.com
       BACKEND_PUBLIC_URL: https://plumber2-base-api.ma-riviere.com
-      # The fallback pair is the benchmarked prod path (2026-07-27); the key
-      # (NVIDIA_API_KEY) comes from harness.env. CHAT_LLAMA_MODELS stays unset:
-      # the router-alias path is unverified against the live llama.cpp router.
+      # Model preference: the private llama.cpp router first (ds4-flash, then
+      # qwen3.6-27b), verified live 2026-07-31 (/models answers status.value ==
+      # "loaded" exactly as chat_router_loaded expects). LLAMA_BASE_URL and
+      # LLAMA_API_KEY come from harness.env; when the spot instance is down the
+      # 2s probe fails and the benchmarked nvidia fallback (2026-07-27) applies.
+      # The key (NVIDIA_API_KEY) comes from harness.env.
       CHAT_ENABLED: "true"
+      CHAT_LLAMA_MODELS: ds4-flash,qwen3.6-27b
       CHAT_FALLBACK_PROVIDER: nvidia
       CHAT_FALLBACK_MODEL: nvidia/nemotron-3-ultra-550b-a55b
     # Backstop for the chat subprocesses: the app caps concurrent sessions and
