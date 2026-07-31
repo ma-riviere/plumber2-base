@@ -189,7 +189,7 @@ test_that("a transiently failed set_model is re-sent by the supervisor before fa
     session <- chat_new_state("k1", 1L, 7L, "en")
     session$status <- "awaiting_model"
     session$provider <- "llama.cpp"
-    session$model <- "qwen3.6-27b"
+    session$model <- "small"
     session$model_retries_left <- 1L
     id <- chat_next_command_id(session, "set_model")
 
@@ -209,7 +209,7 @@ test_that("a transiently failed set_model is re-sent by the supervisor before fa
     chat_retry_set_model(session, session$model_retry_at + 0.1)
     expect_true(is.na(session$model_retry_at))
     expect_equal(session$last_command$type, "set_model")
-    expect_equal(session$last_command$modelId, "qwen3.6-27b")
+    expect_equal(session$last_command$modelId, "small")
 
     # A second failure exhausts the budget and is terminal.
     retry_id <- session$last_command$id
