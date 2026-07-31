@@ -260,7 +260,15 @@ chat_display_session <- function(state, datastore, dataset_id) {
     if (is.null(messages)) {
         return(NULL)
     }
-    list(status = "restored", transcript = messages)
+    restored <- list(status = "restored", transcript = messages)
+    for (entry in rev(messages)) {
+        if (identical(entry$role, "assistant") && nzchar(entry$model %||% "")) {
+            restored$provider <- entry$provider
+            restored$model <- entry$model
+            break
+        }
+    }
+    restored
 }
 
 # --- workdir -------------------------------------------------------------------

@@ -336,6 +336,12 @@ chat_push_message <- function(session, role, text, error = NULL) {
         chips = session$chips,
         thinking = if (nzchar(thinking)) thinking
     )
+    if (identical(role, "assistant")) {
+        # Persisted so a restored transcript can still show which model
+        # answered (the header's info icon) without spawning a session.
+        entry$provider <- session$provider
+        entry$model <- session$model
+    }
     session$transcript <- c(session$transcript, list(entry))
     if (length(session$transcript) > CHAT_TRANSCRIPT_MESSAGES) {
         session$transcript <- utils::tail(session$transcript, CHAT_TRANSCRIPT_MESSAGES)

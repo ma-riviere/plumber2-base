@@ -156,8 +156,8 @@ chat_form_html <- function(dataset_id, lang, translations, oob = FALSE) {
 # The model is only chosen when the pi session spawns (first
 # question), so a plain render may leave the span empty; the send and reset
 # responses re-state it OOB once the choice is made (or gone). Restored
-# transcripts render without it: the model is not persisted, and the next
-# question may pick a different one.
+# transcripts show the model that produced the last persisted answer
+# (chat_display_session lifts it from the assistant entries).
 chat_model_info_html <- function(session, lang, translations, oob = FALSE) {
     provider <- session$provider %||% ""
     model <- session$model %||% ""

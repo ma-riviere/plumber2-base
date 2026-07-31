@@ -190,6 +190,8 @@ test_that("a settled chat is restored on the next explore render and replayed on
     expect_match(page$body, "hello", fixed = TRUE)
     expect_match(page$body, "Stub answer.", fixed = TRUE)
     expect_false(grepl("load delay:1s", page$body, fixed = TRUE))
+    # The header still shows which model produced the persisted answers.
+    expect_match(page$body, 'title="[stub] stub-model"', fixed = TRUE)
 
     # The revived subprocess gets the previous dialogue replayed inside its
     # first prompt, and the displayed transcript continues where it ended.
