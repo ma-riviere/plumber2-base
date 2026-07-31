@@ -31,7 +31,11 @@ chat_widget_html <- function(session, dataset_id, lang, translations) {
             id = "chat-panel",
             htmltools::div(
                 class = "card-header d-flex align-items-center justify-content-between",
-                htmltools::tags$span(class = "fw-semibold", tr("Dataset assistant", lang, translations)),
+                htmltools::div(
+                    class = "d-flex align-items-center gap-1",
+                    htmltools::tags$span(class = "fw-semibold", tr("Dataset assistant", lang, translations)),
+                    htmltools::HTML(chat_model_info_html(session, lang, translations))
+                ),
                 htmltools::div(
                     class = "d-flex align-items-center gap-2",
                     htmltools::tags$button(
@@ -144,6 +148,34 @@ chat_form_html <- function(dataset_id, lang, translations, oob = FALSE) {
             title = tr("Send (Ctrl+Enter)", lang, translations),
             bs_icon("send")
         )
+    ))
+}
+
+# The header's model indicator: an info icon whose hover title carries
+# "[provider] model" ("[local]" for the platform router: llama.cpp or vllm).
+# The model is only chosen when the pi session spawns (first
+# question), so a plain render may leave the span empty; the send and reset
+# responses re-state it OOB once the choice is made (or gone). Restored
+# transcripts render without it: the model is not persisted, and the next
+# question may pick a different one.
+chat_model_info_html <- function(session, lang, translations, oob = FALSE) {
+    provider <- session$provider %||% ""
+    model <- session$model %||% ""
+    if (provider %in% c("llama.cpp", "vllm")) {
+        provider <- "local"
+    }
+    label <- sprintf("[%s] %s", provider, model)
+    render_tags(htmltools::tags$span(
+        id = "chat-model-info",
+        class = "chat-model-info text-muted",
+        `hx-swap-oob` = if (oob) "outerHTML",
+        if (nzchar(provider) && nzchar(model)) {
+            htmltools::tags$span(
+                title = label,
+                `aria-label` = paste0(tr("Model in use", lang, translations), ": ", label),
+                bs_icon("info-circle")
+            )
+        }
     ))
 }
 

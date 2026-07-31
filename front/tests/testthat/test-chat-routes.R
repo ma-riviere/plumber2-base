@@ -96,6 +96,10 @@ test_that("a question spawns the agent, streams and settles into the transcript"
     expect_match(res$body, 'hx-sync="#chat-stream:drop"', fixed = TRUE)
     expect_match(res$body, 'hx-swap-oob="outerHTML"', fixed = TRUE)
     expect_match(res$body, "hello", fixed = TRUE)
+    # The header's model indicator comes back OOB once the session has chosen
+    # its provider/model.
+    expect_match(res$body, 'id="chat-model-info"', fixed = TRUE)
+    expect_match(res$body, 'title="[stub] stub-model"', fixed = TRUE)
 
     key <- ls(chat_registry)
     expect_length(key, 1L)

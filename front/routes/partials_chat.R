@@ -90,7 +90,8 @@ function(request, response, server, datastore, body) {
             set_html_headers(response)
             paste0(
                 chat_stream_html(session, dataset_id, lang, translations),
-                chat_form_html(dataset_id, lang, translations, oob = TRUE)
+                chat_form_html(dataset_id, lang, translations, oob = TRUE),
+                chat_model_info_html(session, lang, translations, oob = TRUE)
             )
         })
     })
@@ -152,7 +153,8 @@ function(request, response, server, datastore, body) {
         set_html_headers(response)
         paste0(
             chat_stream_html(NULL, dataset_id, lang, state$translations),
-            chat_form_html(dataset_id, lang, state$translations, oob = TRUE)
+            chat_form_html(dataset_id, lang, state$translations, oob = TRUE),
+            chat_model_info_html(NULL, lang, state$translations, oob = TRUE)
         )
     })
 }
