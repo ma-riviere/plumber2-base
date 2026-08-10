@@ -1,12 +1,14 @@
-# Model selection policy: prefer the platform's private llama.cpp router when it
-# already has one of the configured aliases LOADED, otherwise fall back to the
-# configured remote provider.
+# Model selection policy: prefer the platform's LLM gateway (one endpoint over
+# the on-demand GPU profiles; ids are namespaced `<profile>:<model>`, e.g.
+# "full:deepseek-v4-flash") when it lists one of the configured ids as
+# available, otherwise fall back to the configured remote provider.
 #
-# The router loads models on demand and a cold load takes minutes, so asking for
-# an unloaded alias would hang the first turn; only `status.value == "loaded"`
-# entries are eligible. One provider per session: a failed turn is never
-# replayed elsewhere; pi's auto-retry may re-ask the SAME provider within the
-# turn, and the walltime deadline caps it either way.
+# Router-fronted profiles (full) load models on demand and a cold load takes
+# minutes, so their entries are only eligible at `status.value == "loaded"`;
+# select-mode profiles (medium/large) publish no status at all, which means
+# "serving". One provider per session: a failed turn is never replayed
+# elsewhere; pi's auto-retry may re-ask the SAME provider within the turn, and
+# the walltime deadline caps it either way.
 
 CHAT_MODELS_TIMEOUT_SECONDS <- 2
 
@@ -30,9 +32,10 @@ chat_prospective_model <- function(config) {
     choice
 }
 
-# `model` is what the wire carries (the router routes on aliases); `display_model`
-# is what the tooltip shows: the checkpoint name the router publishes as its
-# first `tags` entry (deploy-llm derives it from the HF repo), else the alias.
+# `model` is what the wire carries (the gateway routes on the profile prefix);
+# `display_model` is what the tooltip shows: the checkpoint name full's router
+# publishes as its first `tags` entry (deploy-llm derives it from the HF repo),
+# else the id - which since the 2026-08-10 alias change is the real model name.
 chat_choose_model <- function(config) {
     chat <- config$chat
     loaded <- chat_router_loaded(chat)
@@ -51,10 +54,10 @@ chat_choose_model <- function(config) {
     stop(chat_error("No chat model is available right now"))
 }
 
-# The models the router reports as loaded, as a named character vector:
-# names are the routable ids (aliases), values the display names (first tag,
-# falling back to the id). An unreachable or malformed router is not an error
-# here - it just means "nothing loaded", and the fallback applies.
+# The models the gateway reports as available, as a named character vector:
+# names are the routable ids (namespaced), values the display names (first
+# tag, falling back to the id). An unreachable or malformed gateway is not an
+# error here - it just means "nothing available", and the fallback applies.
 chat_router_loaded <- function(chat) {
     if (!nzchar(chat$llama_base_url) || length(chat$llama_models) == 0L) {
         return(character())
@@ -82,8 +85,10 @@ chat_router_loaded <- function(chat) {
     info <- vapply(
         entries,
         function(entry) {
-            status <- be_scalar(entry$status$value) %||% be_scalar(entry$status) %||% ""
-            if (!identical(as.character(status), "loaded")) {
+            status <- as.character(be_scalar(entry$status$value) %||% be_scalar(entry$status) %||% "")
+            # No status field = a select-mode profile that is serving; a status
+            # is router surface and only "loaded" is safe to send to.
+            if (nzchar(status) && !identical(status, "loaded")) {
                 return(c("", ""))
             }
             id <- as.character(be_scalar(entry$id) %||% "")

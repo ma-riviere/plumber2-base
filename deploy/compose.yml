@@ -90,19 +90,19 @@ services:
       BACKEND_URL: http://back:8081
       APP_URL: https://plumber2-base.ma-riviere.com
       BACKEND_PUBLIC_URL: https://plumber2-base-api.ma-riviere.com
-      # Model preference: the private llama.cpp router first (large, then small),
-      # verified live 2026-07-31 (/models answers status.value == "loaded"
-      # exactly as chat_router_loaded expects). Those aliases are FUNCTIONAL on
-      # the router side, so the checkpoint behind them can change without
-      # touching this file. `large` is deliberately absent for the first few
-      # minutes of a GPU session (it is loaded only once `small` is resident, so
-      # it can size itself against the free VRAM), and the preference order then
-      # picks `small` on its own. LLAMA_BASE_URL and LLAMA_API_KEY come from
-      # harness.env; when the instance is down the 2s probe fails and the
-      # benchmarked nvidia fallback (2026-07-27) applies.
+      # Model preference against the LLM gateway (llama.ma-riviere.com, one
+      # endpoint over every GPU profile; ids namespaced <profile>:<model> and
+      # carrying the REAL model names since the 2026-08-10 deploy-llm alias
+      # change): DeepSeek V4 Flash on any profile first (best quant first),
+      # then the smaller models. full's entries carry a status field (its
+      # `deepseek-v4-flash` is deliberately absent for the first minutes of a
+      # session while `gemma4-12b` loads); medium/large entries have none,
+      # which chat_router_loaded treats as "serving". LLAMA_BASE_URL and
+      # LLAMA_API_KEY come from harness.env; when no GPU box is up the list is
+      # empty and the benchmarked nvidia fallback (2026-07-27) applies.
       # The key (NVIDIA_API_KEY) comes from harness.env.
       CHAT_ENABLED: "true"
-      CHAT_LLAMA_MODELS: large,small
+      CHAT_LLAMA_MODELS: "large:deepseek-v4-flash,full:deepseek-v4-flash,medium:deepseek-v4-flash,full:gemma4-12b,medium:gemma4-31b,medium:qwen3.6-27b"
       CHAT_FALLBACK_PROVIDER: nvidia
       CHAT_FALLBACK_MODEL: nvidia/nemotron-3-ultra-550b-a55b
     # Backstop for the chat subprocesses: the app caps concurrent sessions and
