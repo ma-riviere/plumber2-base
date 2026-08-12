@@ -102,7 +102,7 @@ services:
       # empty and the benchmarked nvidia fallback (2026-07-27) applies.
       # The key (NVIDIA_API_KEY) comes from harness.env.
       CHAT_ENABLED: "true"
-      CHAT_LLAMA_MODELS: "large:deepseek-v4-flash,full:deepseek-v4-flash,medium:deepseek-v4-flash,full:gemma4-12b,medium:gemma4-31b,medium:qwen3.6-27b"
+      CHAT_LLAMA_MODELS: "large:deepseek-v4-flash,full:deepseek-v4-flash,medium:deepseek-v4-flash,full:gemma4-12b,medium:gemma4-31b,medium:muse-glimmer-30b,medium:qwen3.6-27b"
       CHAT_FALLBACK_PROVIDER: nvidia
       CHAT_FALLBACK_MODEL: nvidia/nemotron-3-ultra-550b-a55b
     # Backstop for the chat subprocesses: the app caps concurrent sessions and
