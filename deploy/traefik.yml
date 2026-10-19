@@ -1,0 +1,56 @@
+# Traefik routes for the deploy-server platform. deploy-server's Ansible installs this file from the local checkout
+# (apps[].traefik_file) into Traefik's file-provider directory; CI cannot change it. Every name starts with the app
+# name, rules may only use the app's hostnames (apps[].hostnames), and backends are the network aliases set in
+# compose.yml.
+http:
+  routers:
+    plumber2-base-back:
+      rule: "Host(`plumber2-base-api.ma-riviere.com`)"
+      entryPoints: [websecure]
+      service: plumber2-base-back
+      middlewares: [plumber2-base-buffering]
+      tls:
+        certResolver: letsencrypt
+        # Cloudflare Authenticated Origin Pulls: the TLS handshake requires Cloudflare's origin-pull client cert
+        # (option shipped by the platform's traefik role), so direct-to-origin requests fail.
+        options: cloudflare-origin-pull@file
+    plumber2-base-front:
+      rule: "Host(`plumber2-base.ma-riviere.com`)"
+      entryPoints: [websecure]
+      service: plumber2-base-front
+      middlewares: [plumber2-base-buffering]
+      tls:
+        certResolver: letsencrypt
+        options: cloudflare-origin-pull@file
+    # Immutable cache headers for the fingerprinted statics (longer rule = higher priority, same service). @statics
+    # serves at the C++ level and cannot set headers in R. TLS options bind per SNI hostname: this router MUST carry
+    # the same cloudflare-origin-pull option as plumber2-base-front.
+    plumber2-base-static:
+      rule: "Host(`plumber2-base.ma-riviere.com`) && PathPrefix(`/static`)"
+      entryPoints: [websecure]
+      service: plumber2-base-front
+      middlewares: [plumber2-base-static-cache]
+      tls:
+        certResolver: letsencrypt
+        options: cloudflare-origin-pull@file
+
+  middlewares:
+    # Oversized uploads (over 120 MiB) are rejected at the proxy BEFORE the R multipart parser buffers them; the
+    # app's Content-Length precheck and row/col caps remain as the second and third layers.
+    plumber2-base-buffering:
+      buffering:
+        maxRequestBodyBytes: 125829120
+    plumber2-base-static-cache:
+      headers:
+        customResponseHeaders:
+          Cache-Control: "public, max-age=31536000, immutable"
+
+  services:
+    plumber2-base-back:
+      loadBalancer:
+        servers:
+          - url: "http://plumber2-base-back:8081"
+    plumber2-base-front:
+      loadBalancer:
+        servers:
+          - url: "http://plumber2-base-front:8080"

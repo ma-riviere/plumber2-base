@@ -34,28 +34,12 @@ services:
       ENVIRONMENT: prod
       HOST: "0.0.0.0"
       PORT: "8081"
-    labels:
-      traefik.enable: "true"
-      traefik.http.routers.pb-back.rule: "Host(`plumber2-base-api.ma-riviere.com`)"
-      traefik.http.routers.pb-back.entrypoints: websecure
-      traefik.http.routers.pb-back.tls: "true"
-      traefik.http.routers.pb-back.tls.certresolver: letsencrypt
-      # Cloudflare Authenticated Origin Pulls: the TLS handshake requires
-      # Cloudflare's origin-pull client cert (option shipped by the platform's
-      # traefik role), so direct-to-origin requests fail.
-      traefik.http.routers.pb-back.tls.options: cloudflare-origin-pull@file
-      traefik.http.routers.pb-back.middlewares: pb-back-buffering
-      traefik.http.services.pb-back.loadbalancer.server.port: "8081"
-      # Oversized uploads are rejected at the proxy BEFORE the R multipart
-      # parser buffers them; the app's Content-Length precheck and row/col caps
-      # remain as the second and third layers. Defined
-      # per-service (not shared): a middleware referenced across containers
-      # vanishes with its defining container, 500ing the other router while
-      # this one restarts.
-      traefik.http.middlewares.pb-back-buffering.buffering.maxRequestBodyBytes: "125829120"
+    # Traefik routes (deploy/traefik.yml) reach the service through this
+    # alias; the service name `back` is not unique on the shared edge network.
     networks:
-      - edge
-      - postgres
+      edge:
+        aliases: [plumber2-base-back]
+      postgres: {}
 
   front:
     image: ${FRONT_IMAGE:-ghcr.io/ma-riviere/plumber2-base-front:local}
@@ -114,35 +98,10 @@ services:
     cpus: "2.0"
     mem_limit: 2g
     pids_limit: 512
-    labels:
-      traefik.enable: "true"
-      traefik.http.routers.pb-front.rule: "Host(`plumber2-base.ma-riviere.com`)"
-      traefik.http.routers.pb-front.entrypoints: websecure
-      traefik.http.routers.pb-front.tls: "true"
-      traefik.http.routers.pb-front.tls.certresolver: letsencrypt
-      traefik.http.routers.pb-front.tls.options: cloudflare-origin-pull@file
-      traefik.http.routers.pb-front.middlewares: pb-front-buffering
-      # Same 12MB buffering as the back, defined on THIS container so the
-      # front router keeps its middleware while the back restarts.
-      traefik.http.middlewares.pb-front-buffering.buffering.maxRequestBodyBytes: "125829120"
-      traefik.http.services.pb-front.loadbalancer.server.port: "8080"
-      # Immutable cache headers for the fingerprinted statics, scoped to
-      # /static via a dedicated router (longer rule = higher priority, same
-      # service). @statics serves at the C++ level and cannot set headers in R.
-      # TLS options bind per SNI hostname: this router MUST carry the same
-      # cloudflare-origin-pull option as pb-front or Traefik falls back to the
-      # default option for the whole hostname.
-      traefik.http.routers.pb-front-static.rule: "Host(`plumber2-base.ma-riviere.com`) && PathPrefix(`/static`)"
-      traefik.http.routers.pb-front-static.entrypoints: websecure
-      traefik.http.routers.pb-front-static.tls: "true"
-      traefik.http.routers.pb-front-static.tls.certresolver: letsencrypt
-      traefik.http.routers.pb-front-static.tls.options: cloudflare-origin-pull@file
-      traefik.http.routers.pb-front-static.service: pb-front
-      traefik.http.routers.pb-front-static.middlewares: pb-static-cache
-      traefik.http.middlewares.pb-static-cache.headers.customresponseheaders.Cache-Control: "public, max-age=31536000, immutable"
     networks:
-      - edge
-      - postgres
+      edge:
+        aliases: [plumber2-base-front]
+      postgres: {}
 
 networks:
   edge:
