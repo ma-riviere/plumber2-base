@@ -1,7 +1,8 @@
-# Production stack for the deploy-server platform. CI pushes this file verbatim
-# to /srv/apps/plumber-base/compose.yml (`deploy-app push-compose`), where the
+# Production stack for the deploy-server platform. deploy-server's Ansible
+# installs this file from the local checkout (apps[].compose_file) as
+# /srv/apps/plumber2-base/compose.yml, root-owned, where the
 # platform-provisioned db.env sits beside it and the edge/postgres networks are
-# external. Contract (deploy-server examples/README.md): pinned image tags, no
+# external. CI cannot change it: it only sends the image digests. Contract (deploy-server examples/README.md): pinned image tags, no
 # ports:, restart policy, no-new-privileges, container healthcheck (defined in
 # the service Dockerfiles), Traefik-only ingress.
 #
@@ -9,12 +10,13 @@
 # in this directory) swaps in local image builds, a throwaway Postgres, guest
 # mode, and loopback port publishing. See deploy/README.md.
 #
-# CI substitutes IMAGE_TAG with the commit SHA before pushing this file.
+# CI deploys BACK_IMAGE and FRONT_IMAGE as <repository>@sha256:<digest>; the
+# server accepts only these two repositories. Local runs use the :local tags.
 name: plumber2-base
 
 services:
   back:
-    image: ghcr.io/ma-riviere/plumber2-base-back:${IMAGE_TAG:-local}
+    image: ${BACK_IMAGE:-ghcr.io/ma-riviere/plumber2-base-back:local}
     restart: unless-stopped
     init: true
     security_opt:
@@ -56,7 +58,7 @@ services:
       - postgres
 
   front:
-    image: ghcr.io/ma-riviere/plumber2-base-front:${IMAGE_TAG:-local}
+    image: ${FRONT_IMAGE:-ghcr.io/ma-riviere/plumber2-base-front:local}
     restart: unless-stopped
     init: true
     security_opt:
