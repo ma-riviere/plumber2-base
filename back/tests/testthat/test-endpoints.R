@@ -93,3 +93,22 @@ test_that("/v1 responses carry Cache-Control: no-store", {
     expect_equal(res$status, 200L)
     expect_equal(res$headers[["cache-control"]], "no-store")
 })
+
+test_that("brotli-encoded bodies get 415 before auth; other encodings reach auth (CVE-2026-111497)", {
+    with_auth_env()
+    pa <- build_test_api()
+    post_models <- function(encoding) {
+        do_request(
+            pa,
+            "http://t/v1/models",
+            method = "post",
+            headers = list(Content_Type = "application/json", Content_Encoding = encoding),
+            content = "xx"
+        )
+    }
+
+    rejected <- post_models("gzip, BR")
+    expect_equal(rejected$status, 415L)
+    expect_match(rejected$headers[["content-type"]], "application/problem\\+json")
+    expect_equal(post_models("identity")$status, 401L)
+})

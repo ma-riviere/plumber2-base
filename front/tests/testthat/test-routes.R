@@ -60,3 +60,15 @@ test_that("responses carry the strict CSP and DENY frame options", {
     expect_match(csp, "frame-ancestors 'none'", fixed = TRUE)
     expect_equal(res$headers[["x-frame-options"]], "DENY")
 })
+
+test_that("brotli-encoded bodies get 415 before the auth gate; other encodings reach it (CVE-2026-111497)", {
+    pa <- local_front_api()
+    post_logout <- function(encoding) {
+        do_request(pa, "http://t/logout", method = "post", headers = list(Content_Encoding = encoding), content = "xx")
+    }
+
+    rejected <- post_logout("gzip, BR")
+    expect_equal(rejected$status, 415L)
+    expect_match(rejected$headers[["content-type"]], "application/problem\\+json")
+    expect_equal(post_logout("identity")$status, 302L)
+})

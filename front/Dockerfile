@@ -26,7 +26,7 @@ FROM ghcr.io/ma-riviere/docker-plumber2:4.6-runtime
 # both 0.x surfaces, so an unpinned minor can change the wire format under us.
 # Installed globally into /usr/local so the unprivileged app user can only read
 # it. Node >= 22.19 is pi's floor.
-ARG NODE_VERSION=22.19.0
+ARG NODE_VERSION=22.23.4
 ARG PI_VERSION=0.82.1
 
 USER root

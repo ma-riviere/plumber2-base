@@ -32,6 +32,7 @@ assemble_api <- function(state, env = parent.frame(), enable_access_log = TRUE) 
     # Bootstrap's embedded SVGs and https: for the IdP-hosted avatar in the
     # profile modal (images cannot execute script).
     api <- plumber2::api(host = config$host, port = config$port, env = env) |>
+        add_brotli_guard_route() |>
         plumber2::api_datastore(driver, gc_interval = 3600, max_age = 604800) |>
         plumber2::api_security_headers(
             content_security_policy = plumber2::csp(
@@ -94,6 +95,23 @@ assemble_api <- function(state, env = parent.frame(), enable_access_log = TRUE) 
     api$trust <- is_prod
 
     api
+}
+
+# CVE-2026-111497 ("Broccoli2Shell"): the libbrotli bundled in the R brotli
+# package has an out-of-bounds write in its decoder, and reqres decompresses
+# `Content-Encoding: br` bodies while parsing them. A header-stage route rejects
+# such requests with 415 before the body is even received, and before the auth
+# gate (a request-router route, which runs after the header router).
+add_brotli_guard_route <- function(api) {
+    route <- routr::Route$new()
+    route$add_handler("all", "/*", function(request, response, keys, ...) {
+        encoding <- paste(request$get_header("Content-Encoding"), collapse = ",")
+        if ("br" %in% trimws(strsplit(tolower(encoding), ",", fixed = TRUE)[[1]])) {
+            reqres::abort_http_problem(415L, detail = "brotli-encoded request bodies are not accepted")
+        }
+        TRUE
+    })
+    plumber2::api_add_route(api, "reject_brotli", route = route, header = TRUE)
 }
 
 # CSV download proxy as a raw routr route: a plumber2 handler cannot emit a

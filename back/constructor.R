@@ -111,6 +111,23 @@ add_docs_csp_route <- function(api) {
     plumber2::api_add_route(api, "docs_csp", route = docs_route)
 }
 
+# CVE-2026-111497 ("Broccoli2Shell"): the libbrotli bundled in the R brotli
+# package has an out-of-bounds write in its decoder, and reqres decompresses
+# `Content-Encoding: br` bodies while parsing them. A header-stage route rejects
+# such requests with 415 before the body is even received, and before auth
+# (fireproof lives in the request router, which runs after the header router).
+add_brotli_guard_route <- function(api) {
+    route <- routr::Route$new()
+    route$add_handler("all", "/*", function(request, response, keys, ...) {
+        encoding <- paste(request$get_header("Content-Encoding"), collapse = ",")
+        if ("br" %in% trimws(strsplit(tolower(encoding), ",", fixed = TRUE)[[1]])) {
+            reqres::abort_http_problem(415L, detail = "brotli-encoded request bodies are not accepted")
+        }
+        TRUE
+    })
+    plumber2::api_add_route(api, "reject_brotli", route = route, header = TRUE)
+}
+
 on_end <- function(...) {
     pool <- app_pool()
     if (!is.null(pool) && pool::dbIsValid(pool)) {
@@ -142,6 +159,7 @@ v1_route$root <- "/v1"
 # then the not-found fallback (added at start, after the ignite-time docs
 # route).
 pa <- plumber2::api() |>
+    add_brotli_guard_route() |>
     plumber2::api_datastore(storr::driver_environment(), max_age = 900) |>
     plumber2::api_auth_guard(jwt_guard(config, permissions), "jwt") |>
     plumber2::api_auth_guard(api_key_guard(), "api_key") |>
